@@ -4,7 +4,7 @@ services:
     container_name: today-page
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "8787:8080"
     environment:
       LATITUDE: "39.7392"
       LONGITUDE: "-104.9903"
