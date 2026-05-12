@@ -53,7 +53,7 @@ services:
     container_name: today-page
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "8787:8080"
     environment:
       LATITUDE: "39.7392"
       LONGITUDE: "-104.9903"
@@ -67,7 +67,7 @@ services:
         - CMD
         - python
         - "-c"
-        - "import urllib.request; urllib.request.urlopen('http://localhost:8080/api/health')"
+         - "import urllib.request; urllib.request.urlopen('http://localhost:8787/api/health')"
       interval: 30s
       timeout: 5s
       retries: 3
@@ -96,7 +96,7 @@ services:
     container_name: today-page
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "8787:8080"
     environment:
       LATITUDE: "39.7392"
       LONGITUDE: "-104.9903"
@@ -110,7 +110,7 @@ services:
         - CMD
         - python
         - "-c"
-        - "import urllib.request; urllib.request.urlopen('http://localhost:8080/api/health')"
+         - "import urllib.request; urllib.request.urlopen('http://localhost:8787/api/health')"
       interval: 30s
       timeout: 5s
       retries: 3
@@ -135,7 +135,7 @@ docker ps | grep today-page
 docker logs today-page
 
 # Test the API
-curl http://localhost:8080/api/health
+curl http://localhost:8787/api/health
 ```
 
 You should see:
@@ -161,7 +161,7 @@ credentials-file: /root/.cloudflared/<your-tunnel-id>.json
 
 ingress:
   - hostname: dash.arlesm.xyz
-    service: http://localhost:8080
+    service: http://localhost:8787
 
   # Keep your existing routes above this line
   - service: http_status:404
@@ -183,7 +183,7 @@ docker restart cloudflared
    - **Subdomain:** `dash`
    - **Domain:** `arlesm.xyz`
    - **Type:** HTTP
-   - **URL:** `localhost:8080`
+   - **URL:** `localhost:8787`
 4. Save and wait for the tunnel to update
 
 ---
@@ -223,15 +223,15 @@ docker compose up -d
 | "Image pull failed" | Make sure the GitHub package is **public** (Step 0) |
 | Weather shows "unavailable" | Wait 10-15 seconds after startup, then refresh. Check `/api/health`. |
 | Container keeps restarting | `docker logs today-page` — likely a port conflict or path issue |
-| Port 8080 already in use | Change the host port in docker-compose.yml to `8081:8080` |
-| Cloudflare shows 502 | Tunnel not routing correctly — verify `localhost:8080` is reachable from TrueNAS |
+| Port 8787 already in use | Change the host port in docker-compose.yml to `8788:8080` |
+| Cloudflare shows 502 | Tunnel not routing correctly — verify `localhost:8787` is reachable from TrueNAS |
 | Wrong location weather | Update `LATITUDE`, `LONGITUDE`, and `LOCATION_NAME` env vars |
 
 ### Check weather data directly
 
 ```bash
 # From TrueNAS
-curl http://localhost:8080/api/weather | python3 -m json.tool
+curl http://localhost:8787/api/weather | python3 -m json.tool
 
 # From your computer (after tunnel is working)
 curl https://dash.arlesm.xyz/api/weather | python3 -m json.tool
