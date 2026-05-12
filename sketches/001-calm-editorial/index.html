@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Morning Paper</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Crimson Text', Georgia, serif;
+            color: #2d2d2d;
+            background: #f7f5f0;
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+        }
+        .sans { font-family: 'Inter', sans-serif; }
+        .paper-shadow {
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06);
+        }
+        .section-title {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: #999;
+            margin-bottom: 1.5rem;
+        }
+        .headline {
+            font-size: 1.5rem;
+            line-height: 1.3;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .headline:hover { color: #8b7355; }
+        .lede {
+            font-size: 1.05rem;
+            color: #555;
+            line-height: 1.6;
+        }
+        .weather-big {
+            font-size: 4rem;
+            font-weight: 300;
+            line-height: 1;
+        }
+        .tab {
+            cursor: pointer;
+            padding: 0.4rem 0;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+            color: #999;
+        }
+        .tab.active {
+            color: #2d2d2d;
+            border-bottom-color: #2d2d2d;
+        }
+        .tab:hover { color: #555; }
+        .story-card {
+            padding: 2rem 0;
+            border-bottom: 1px solid #e8e4dc;
+            transition: background 0.2s;
+        }
+        .story-card:hover { background: rgba(255,255,255,0.5); }
+        .story-card:last-child { border-bottom: none; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in { animation: fadeIn 0.5s ease-out; }
+        
+        .hidden-section { display: none; }
+        .hidden-section.active { display: block; }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div class="max-w-2xl mx-auto px-8 py-16">
+        
+        <!-- Masthead -->
+        <header class="text-center mb-16 fade-in">
+            <p class="sans text-xs uppercase tracking-[0.3em] text-gray-400 mb-2">Tuesday, May 12, 2026</p>
+            <h1 class="text-5xl font-normal tracking-tight text-gray-800" style="font-family: 'Crimson Text', serif;">Good Morning, Arles</h1>
+            <div class="w-16 h-px bg-gray-300 mx-auto mt-6"></div>
+        </header>
+
+        <!-- Weather & Day -->
+        <section class="mb-16 fade-in" style="animation-delay: 0.1s">
+            <div class="paper-shadow bg-white rounded-sm p-8">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="section-title">Denver Today</p>
+                        <div class="flex items-baseline gap-4">
+                            <span class="weather-big">72°</span>
+                            <span class="text-lg text-gray-500">Mostly sunny</span>
+                        </div>
+                        <div class="sans text-sm text-gray-400 mt-2 flex gap-4">
+                            <span>H: 78°</span>
+                            <span>L: 52°</span>
+                            <span>Wind 8 mph</span>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="sans text-4xl font-light text-gray-300">02:34</p>
+                        <p class="sans text-sm text-gray-400 mt-1">PM</p>
+                    </div>
+                </div>
+                
+                <div class="mt-8 pt-6 border-t border-gray-100">
+                    <p class="section-title">What's Happening Today</p>
+                    <div class="space-y-3">
+                        <div class="flex gap-4 items-baseline">
+                            <span class="sans text-sm text-gray-400 w-16">09:00</span>
+                            <span class="text-lg">Standup meeting — Answer Engineering</span>
+                        </div>
+                        <div class="flex gap-4 items-baseline">
+                            <span class="sans text-sm text-gray-400 w-16">12:30</span>
+                            <span class="text-lg">Lunch with Sarah</span>
+                        </div>
+                        <div class="flex gap-4 items-baseline">
+                            <span class="sans text-sm text-gray-400 w-16">16:00</span>
+                            <span class="text-lg">Project review with design team</span>
+                        </div>
+                        <div class="flex gap-4 items-baseline opacity-40">
+                            <span class="sans text-sm text-gray-400 w-16">19:00</span>
+                            <span class="text-lg line-through">Gym — lower body</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- News -->
+        <section class="mb-16 fade-in" style="animation-delay: 0.2s">
+            <div class="flex gap-6 mb-8 border-b border-gray-200">
+                <span class="tab active" onclick="switchTab('world')">World</span>
+                <span class="tab" onclick="switchTab('tech')">Science & Tech</span>
+                <span class="tab" onclick="switchTab('local')">Denver</span>
+                <span class="tab" onclick="switchTab('reddit')">Reddit Reads</span>
+            </div>
+
+            <div id="world" class="hidden-section active">
+                <div class="story-card">
+                    <p class="sans text-xs text-gray-400 mb-2">The Guardian · 2 hours ago</p>
+                    <h2 class="headline">Global Climate Summit Reaches Tentative Agreement on Emissions Timeline</h2>
+                    <p class="lede">Delegates from 140 countries agreed on a framework that, while falling short of activists' demands, marks the first binding commitment to phase out coal subsidies by 2040.</p>
+                </div>
+                <div class="story-card">
+                    <p class="sans text-xs text-gray-400 mb-2">Reuters · 4 hours ago</p>
+                    <h2 class="headline">Markets Steady as Inflation Data Comes in Below Forecasts</h2>
+                    <p class="lede">Core CPI rose 2.8% year-over-year, calming fears of another rate hike cycle and sending the S&P 500 to its third consecutive day of gains.</p>
+                </div>
+                <div class="story-card">
+                    <p class="sans text-xs text-gray-400 mb-2">BBC · 6 hours ago</p>
+                    <h2 class="headline">SpaceX Successfully Docks Starship with Orbital Refueling Station</h2>
+                    <p class="lede">The milestone test brings Mars mission architecture one step closer to reality, though NASA officials urge caution on timeline expectations.</p>
+                </div>
+            </div>
+
+            <div id="tech" class="hidden-section">
+                <div class="story-card">
+                    <p class="sans text-xs text-gray-400 mb-2">Ars Technica · 1 hour ago</p>
+                    <h2 class="headline">New Battery Chemistry Promises 3x Energy Density at Half the Cost</h2>
+                    <p class="lede">Researchers at MIT demonstrated a solid-state lithium-sulfur cell that survived 1,000 charge cycles, potentially reshaping EV economics.</p>
+                </div>
+                <div class="story-card">
+                    <p class="sans text-xs text-gray-400 mb-2">Nature · 3 hours ago</p>
+                    <h2 class="headline">James Webb Telescope Detects Atmospheric Biosignatures on Exoplanet K2-18b</h2>
+                    <p class="lede">The detection of dimethyl sulfide and carbon dioxide in the hycean world's atmosphere is being described as the strongest evidence yet for life beyond Earth.</p>
+                </div>
+            </div>
+
+            <div id="local" class="hidden-section">
+                <div class="story-card">
+                    <p class="sans text-xs text-gray-400 mb-2">Denver Post · 30 min ago</p>
+                    <h2 class="headline">City Council Approves Expanded Bike Lane Network for Downtown</h2>
+                    <p class="lede">The 12-mile expansion will connect RiNo to Capitol Hill by 2027, though some business owners along Colfax remain concerned about parking impacts.</p>
+                </div>
+                <div class="story-card">
+                    <p class="sans text-xs text-gray-400 mb-2">9News · 2 hours ago</p>
+                    <h2 class="headline">Red Flag Warning Issued for Front Range Foothills This Weekend</h2>
+                    <p class="lede">Dry conditions and high winds could create critical fire weather. Officials advise against outdoor burning and caution with power equipment.</p>
+                </div>
+            </div>
+
+            <div id="reddit" class="hidden-section">
+                <div class="story-card">
+                    <p class="sans text-xs text-gray-400 mb-2">r/space · highly upvoted</p>
+                    <h2 class="headline">"I worked on the Starship docking system. Here's what went wrong in the first three attempts."</h2>
+                    <p class="lede">An engineer's threaded breakdown of sensor alignment issues, valve timing tolerances, and the fix that finally worked. Fascinating if you're into control systems.</p>
+                </div>
+                <div class="story-card">
+                    <p class="sans text-xs text-gray-400 mb-2">r/personalfinance · trending</p>
+                    <h2 class="headline">"I automated my entire budget with a spreadsheet and it changed everything"</h2>
+                    <p class="lede">A detailed walkthrough of tracking cash flow by category, with templates provided. The comments section is surprisingly wholesome and actionable.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="text-center py-12 border-t border-gray-200 fade-in" style="animation-delay: 0.3s">
+            <p class="sans text-xs text-gray-400 tracking-wide">Updated at 02:34 PM · Denver, Colorado</p>
+            <p class="sans text-xs text-gray-300 mt-2 italic">"The news you need, without the noise you don't."</p>
+        </footer>
+    </div>
+
+    <script>
+        function switchTab(tabId) {
+            document.querySelectorAll('.hidden-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
+        }
+    </script>
+</body>
+</html>

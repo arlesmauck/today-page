@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Today — Arles</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: #e4e4e7;
+            background: #0c0c0e;
+            -webkit-font-smoothing: antialiased;
+            font-size: 13px;
+        }
+        .card {
+            background: #18181b;
+            border: 1px solid #27272a;
+            border-radius: 10px;
+            padding: 16px;
+            transition: border-color 0.2s, transform 0.1s;
+        }
+        .card:hover { border-color: #3f3f46; }
+        .metric { font-variant-numeric: tabular-nums; }
+        .news-item {
+            padding: 12px 0;
+            border-bottom: 1px solid #27272a;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .news-item:hover { background: rgba(255,255,255,0.02); }
+        .news-item:last-child { border-bottom: none; }
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        .pill-green { background: rgba(34,197,94,0.1); color: #4ade80; }
+        .pill-yellow { background: rgba(234,179,8,0.1); color: #facc15; }
+        .pill-blue { background: rgba(59,130,246,0.1); color: #60a5fa; }
+        .pill-gray { background: rgba(255,255,255,0.05); color: #a1a1aa; }
+        
+        .calendar-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .dot-work { background: #60a5fa; }
+        .dot-personal { background: #a78bfa; }
+        .dot-done { background: #52525b; }
+        
+        .grid-dashboard {
+            display: grid;
+            grid-template-columns: 320px 1fr 300px;
+            gap: 16px;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        @media (max-width: 1200px) {
+            .grid-dashboard { grid-template-columns: 1fr 1fr; }
+        }
+        @media (max-width: 768px) {
+            .grid-dashboard { grid-template-columns: 1fr; }
+        }
+        
+        .fader {
+            animation: fader 0.4s ease-out;
+        }
+        @keyframes fader {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .ticker-wrap {
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        .ticker {
+            display: inline-block;
+            animation: ticker 30s linear infinite;
+        }
+        @keyframes ticker {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Top bar -->
+    <div class="border-b border-zinc-800 bg-zinc-900/50 backdrop-blur-sm sticky top-0 z-10">
+        <div class="max-w-[1400px] mx-auto px-5 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <h1 class="text-lg font-semibold tracking-tight">Today</h1>
+                <span class="text-zinc-600">·</span>
+                <span class="text-zinc-500 text-xs">Tue, May 12</span>
+                <span class="text-zinc-600">·</span>
+                <span class="text-zinc-400 text-xs tabular-nums" id="clock">14:34</span>
+            </div>
+            <div class="text-xs text-zinc-500">
+                Denver, CO · 72° ☀
+            </div>
+        </div>
+    </div>
+
+    <div class="grid-dashboard fader">
+        <!-- LEFT: Today & Calendar -->
+        <div class="space-y-4">
+            <div class="card">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-xs font-semibold uppercase tracking-wider text-zinc-500">Weather</h2>
+                    <span class="pill pill-yellow">Fair</span>
+                </div>
+                <div class="flex items-baseline gap-3">
+                    <span class="text-5xl font-light metric text-white">72°</span>
+                    <div class="text-zinc-400 text-xs leading-relaxed">
+                        <div>H: 78° L: 52°</div>
+                        <div>Wind 8 mph · 18% humidity</div>
+                    </div>
+                </div>
+                <div class="mt-4 flex gap-2 text-xs text-zinc-500">
+                    <div class="flex-1 text-center p-2 rounded bg-zinc-900">
+                        <div class="text-zinc-300">Wed</div>
+                        <div class="text-white mt-1">75°</div>
+                    </div>
+                    <div class="flex-1 text-center p-2 rounded bg-zinc-900">
+                        <div class="text-zinc-300">Thu</div>
+                        <div class="text-white mt-1">71°</div>
+                    </div>
+                    <div class="flex-1 text-center p-2 rounded bg-zinc-900">
+                        <div class="text-zinc-300">Fri</div>
+                        <div class="text-white mt-1">68°</div>
+                    </div>
+                    <div class="flex-1 text-center p-2 rounded bg-zinc-900">
+                        <div class="text-zinc-300">Sat</div>
+                        <div class="text-white mt-1">74°</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-xs font-semibold uppercase tracking-wider text-zinc-500">Schedule</h2>
+                    <span class="text-xs text-zinc-600">3 events</span>
+                </div>
+                <div class="space-y-3">
+                    <div class="flex gap-3 items-start">
+                        <div class="text-xs text-zinc-500 metric w-10 pt-0.5">09:00</div>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="calendar-dot dot-work"></span>
+                                <span class="text-sm text-white">Standup</span>
+                            </div>
+                            <p class="text-xs text-zinc-500 mt-0.5 ml-3.5">Answer Engineering · Zoom</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-3 items-start">
+                        <div class="text-xs text-zinc-500 metric w-10 pt-0.5">12:30</div>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="calendar-dot dot-personal"></span>
+                                <span class="text-sm text-white">Lunch with Sarah</span>
+                            </div>
+                            <p class="text-xs text-zinc-500 mt-0.5 ml-3.5">The Mercantile</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-3 items-start">
+                        <div class="text-xs text-zinc-500 metric w-10 pt-0.5">16:00</div>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="calendar-dot dot-work"></span>
+                                <span class="text-sm text-white">Project Review</span>
+                            </div>
+                            <p class="text-xs text-zinc-500 mt-0.5 ml-3.5">Design team · Conf room B</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-3 items-start opacity-40">
+                        <div class="text-xs text-zinc-500 metric w-10 pt-0.5">19:00</div>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="calendar-dot dot-done"></span>
+                                <span class="text-sm text-zinc-500 line-through">Gym</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">Quick Stats</h2>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="p-3 rounded-lg bg-zinc-900">
+                        <div class="text-2xl font-light metric text-white">4,231</div>
+                        <div class="text-xs text-zinc-500 mt-1">Steps today</div>
+                    </div>
+                    <div class="p-3 rounded-lg bg-zinc-900">
+                        <div class="text-2xl font-light metric text-white">5h 12m</div>
+                        <div class="text-xs text-zinc-500 mt-1">Screen time</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CENTER: News Feed -->
+        <div class="card">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xs font-semibold uppercase tracking-wider text-zinc-500">What Matters</h2>
+                <div class="flex gap-1">
+                    <button class="px-3 py-1 rounded text-xs bg-zinc-800 text-zinc-300" onclick="filterNews('all')">All</button>
+                    <button class="px-3 py-1 rounded text-xs text-zinc-500 hover:bg-zinc-800" onclick="filterNews('world')">World</button>
+                    <button class="px-3 py-1 rounded text-xs text-zinc-500 hover:bg-zinc-800" onclick="filterNews('tech')">Tech</button>
+                </div>
+            </div>
+            
+            <div id="news-container" class="space-y-0">
+                <div class="news-item" data-category="world">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="pill pill-blue">World</span>
+                                <span class="text-xs text-zinc-500">The Guardian · 2h</span>
+                            </div>
+                            <h3 class="text-sm font-medium text-white leading-snug">Global Climate Summit Reaches Tentative Agreement on Emissions Timeline</h3>
+                            <p class="text-xs text-zinc-500 mt-1 line-clamp-2">140 countries agree on framework to phase out coal subsidies by 2040, falling short of activist demands but marking a first.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="news-item" data-category="world">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="pill pill-green">Markets</span>
+                                <span class="text-xs text-zinc-500">Reuters · 4h</span>
+                            </div>
+                            <h3 class="text-sm font-medium text-white leading-snug">Markets Steady as Inflation Data Comes in Below Forecasts</h3>
+                            <p class="text-xs text-zinc-500 mt-1 line-clamp-2">Core CPI at 2.8% YoY calms rate hike fears, S&P 500 climbs for third consecutive day.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="news-item" data-category="tech">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="pill pill-yellow">Science</span>
+                                <span class="text-xs text-zinc-500">Nature · 3h</span>
+                            </div>
+                            <h3 class="text-sm font-medium text-white leading-snug">James Webb Detects Atmospheric Biosignatures on Exoplanet K2-18b</h3>
+                            <p class="text-xs text-zinc-500 mt-1 line-clamp-2">Dimethyl sulfide and CO2 detected — described as strongest evidence yet for life beyond Earth.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="news-item" data-category="tech">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="pill pill-yellow">Tech</span>
+                                <span class="text-xs text-zinc-500">Ars Technica · 1h</span>
+                            </div>
+                            <h3 class="text-sm font-medium text-white leading-snug">Solid-State Battery Breakthrough: 3x Density, Half Cost</h3>
+                            <p class="text-xs text-zinc-500 mt-1 line-clamp-2">MIT lithium-sulfur cell survives 1,000 cycles — could reshape EV economics entirely.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="news-item" data-category="world">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="pill pill-gray">Reddit</span>
+                                <span class="text-xs text-zinc-500">r/space · trending</span>
+                            </div>
+                            <h3 class="text-sm font-medium text-white leading-snug">"I worked on Starship docking. Here's what went wrong in the first three attempts."</h3>
+                            <p class="text-xs text-zinc-500 mt-1 line-clamp-2">Engineer's threaded breakdown of sensor alignment and valve timing. Fascinating read.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="news-item" data-category="world">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="pill pill-blue">Local</span>
+                                <span class="text-xs text-zinc-500">Denver Post · 30m</span>
+                            </div>
+                            <h3 class="text-sm font-medium text-white leading-snug">City Council Approves 12-Mile Bike Lane Expansion</h3>
+                            <p class="text-xs text-zinc-500 mt-1 line-clamp-2">RiNo to Capitol Hill by 2027. Some Colfax business owners concerned about parking.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT: Reddit & Context -->
+        <div class="space-y-4">
+            <div class="card">
+                <h2 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">Reddit Reads</h2>
+                <div class="space-y-3">
+                    <div class="p-3 rounded-lg bg-zinc-900 cursor-pointer hover:bg-zinc-800 transition-colors">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-xs text-orange-400">r/personalfinance</span>
+                            <span class="text-xs text-zinc-600">· 2.4k upvotes</span>
+                        </div>
+                        <p class="text-xs text-zinc-300 leading-relaxed">"I automated my entire budget with a spreadsheet and it changed everything"</p>
+                    </div>
+                    <div class="p-3 rounded-lg bg-zinc-900 cursor-pointer hover:bg-zinc-800 transition-colors">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-xs text-orange-400">r/aerospace</span>
+                            <span class="text-xs text-zinc-600">· 892 upvotes</span>
+                        </div>
+                        <p class="text-xs text-zinc-300 leading-relaxed">New FAA certification pathway for small satellite launchers explained</p>
+                    </div>
+                    <div class="p-3 rounded-lg bg-zinc-900 cursor-pointer hover:bg-zinc-800 transition-colors">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-xs text-orange-400">r/selfhosted</span>
+                            <span class="text-xs text-zinc-600">· 1.1k upvotes</span>
+                        </div>
+                        <p class="text-xs text-zinc-300 leading-relaxed">Showoff: My home server dashboard with RSS, weather, and calendar</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">Tomorrow</h2>
+                <div class="space-y-2">
+                    <div class="flex gap-3 items-center">
+                        <span class="calendar-dot dot-work"></span>
+                        <div>
+                            <p class="text-sm text-white">Engineering all-hands</p>
+                            <p class="text-xs text-zinc-500">10:00 AM · Main auditorium</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-3 items-center">
+                        <span class="calendar-dot dot-personal"></span>
+                        <div>
+                            <p class="text-sm text-white">Dentist appointment</p>
+                            <p class="text-xs text-zinc-500">2:30 PM · Downtown Dental</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">Heads Up</h2>
+                <div class="p-3 rounded-lg bg-yellow-500/5 border border-yellow-500/20">
+                    <p class="text-xs text-yellow-500/90 leading-relaxed">🔥 Red Flag Warning this weekend for Front Range foothills. Avoid outdoor burning.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updateClock() {
+            const now = new Date();
+            const h = now.getHours().toString().padStart(2, '0');
+            const m = now.getMinutes().toString().padStart(2, '0');
+            document.getElementById('clock').textContent = h + ':' + m;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        function filterNews(category) {
+            const items = document.querySelectorAll('.news-item');
+            items.forEach(item => {
+                if (category === 'all' || item.dataset.category === category) {
+                    item.style.display = '';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

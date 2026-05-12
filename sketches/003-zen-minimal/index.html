@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Today</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,400&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', sans-serif;
+            color: #3d3d3d;
+            background: #fefefe;
+            -webkit-font-smoothing: antialiased;
+            line-height: 1.6;
+        }
+        .serif { font-family: 'Newsreader', Georgia, serif; }
+        
+        .zen-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 24px;
+            max-width: 600px;
+            margin: 0 auto;
+            transition: justify-content 0.6s ease;
+        }
+        .zen-container.expanded {
+            justify-content: flex-start;
+            padding-top: 60px;
+        }
+        
+        .greeting {
+            font-weight: 300;
+            font-size: 2rem;
+            color: #9ca3af;
+            letter-spacing: -0.02em;
+            margin-bottom: 8px;
+            opacity: 0;
+            animation: breatheIn 1s ease-out forwards;
+        }
+        .name {
+            font-weight: 400;
+            font-size: 2.5rem;
+            color: #1f1f1f;
+            letter-spacing: -0.03em;
+            margin-bottom: 32px;
+            opacity: 0;
+            animation: breatheIn 1s ease-out 0.2s forwards;
+        }
+        
+        .time-display {
+            font-variant-numeric: tabular-nums;
+            font-weight: 300;
+            font-size: 5rem;
+            color: #e5e7eb;
+            line-height: 1;
+            letter-spacing: -0.04em;
+            margin-bottom: 48px;
+            opacity: 0;
+            animation: breatheIn 1s ease-out 0.4s forwards;
+        }
+        
+        .essence {
+            width: 100%;
+            opacity: 0;
+            animation: breatheIn 1s ease-out 0.6s forwards;
+        }
+        
+        .essence-item {
+            padding: 20px 0;
+            border-bottom: 1px solid #f3f4f6;
+            transition: all 0.3s ease;
+        }
+        .essence-item:hover {
+            padding-left: 8px;
+        }
+        .essence-item:last-child {
+            border-bottom: none;
+        }
+        
+        .expand-btn {
+            margin-top: 48px;
+            padding: 10px 24px;
+            border: 1px solid #e5e7eb;
+            border-radius: 100px;
+            background: transparent;
+            color: #9ca3af;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            opacity: 0;
+            animation: breatheIn 1s ease-out 0.8s forwards;
+        }
+        .expand-btn:hover {
+            border-color: #d1d5db;
+            color: #6b7280;
+            background: #fafafa;
+        }
+        
+        .full-view {
+            width: 100%;
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            transition: max-height 0.8s ease, opacity 0.6s ease;
+        }
+        .full-view.open {
+            max-height: 2000px;
+            opacity: 1;
+        }
+        
+        .section {
+            margin-bottom: 48px;
+        }
+        .section-label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: #d1d5db;
+            margin-bottom: 16px;
+        }
+        
+        .weather-line {
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+        }
+        .weather-temp {
+            font-size: 3rem;
+            font-weight: 300;
+            color: #1f1f1f;
+            line-height: 1;
+        }
+        .weather-desc {
+            font-size: 1rem;
+            color: #9ca3af;
+        }
+        
+        .story-title {
+            font-size: 1.15rem;
+            line-height: 1.4;
+            color: #1f1f1f;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .story-title:hover {
+            color: #6b7280;
+        }
+        .story-meta {
+            font-size: 0.75rem;
+            color: #d1d5db;
+            margin-top: 6px;
+        }
+        
+        .task-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid #f9fafb;
+        }
+        .task-row:last-child {
+            border-bottom: none;
+        }
+        .task-check {
+            width: 18px;
+            height: 18px;
+            border: 1.5px solid #e5e7eb;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .task-check:hover {
+            border-color: #9ca3af;
+        }
+        .task-check.done {
+            background: #e5e7eb;
+            border-color: #e5e7eb;
+        }
+        .task-text {
+            font-size: 0.95rem;
+            color: #3d3d3d;
+            transition: all 0.2s;
+        }
+        .task-text.done {
+            text-decoration: line-through;
+            color: #d1d5db;
+        }
+        .task-time {
+            font-size: 0.75rem;
+            color: #d1d5db;
+            margin-left: auto;
+        }
+        
+        .intention {
+            font-style: italic;
+            font-size: 1.1rem;
+            color: #9ca3af;
+            text-align: center;
+            margin-bottom: 48px;
+            opacity: 0;
+            animation: breatheIn 1s ease-out 0.5s forwards;
+        }
+        
+        @keyframes breatheIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .fade-up {
+            animation: breatheIn 0.6s ease-out forwards;
+        }
+    </style>
+</head>
+<body>
+    <div class="zen-container" id="container">
+        <p class="greeting">Good morning</p>
+        <h1 class="name">Arles</h1>
+        
+        <div class="time-display" id="clock">02:34</div>
+        
+        <p class="intention serif">"Be informed, not overwhelmed."</p>
+        
+        <div class="essence">
+            <div class="essence-item">
+                <div class="weather-line">
+                    <span class="weather-temp">72°</span>
+                    <span class="weather-desc">Mostly sunny in Denver</span>
+                </div>
+            </div>
+            
+            <div class="essence-item">
+                <p class="serif story-title">James Webb Telescope detects atmospheric biosignatures on exoplanet K2-18b</p>
+                <p class="story-meta">Nature · 3 hours ago</p>
+            </div>
+            
+            <div class="essence-item">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-400">Today</p>
+                        <p class="text-lg text-gray-800">3 events scheduled</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm text-gray-400">Next</p>
+                        <p class="text-lg text-gray-800">Standup at 9:00 AM</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <button class="expand-btn" id="expandBtn" onclick="toggleExpand()">See everything</button>
+        
+        <div class="full-view" id="fullView">
+            <div class="section">
+                <p class="section-label">Your Day</p>
+                <div class="task-row">
+                    <div class="task-check" onclick="toggleTask(this)"></div>
+                    <span class="task-text">Team standup — Answer Engineering</span>
+                    <span class="task-time">09:00</span>
+                </div>
+                <div class="task-row">
+                    <div class="task-check" onclick="toggleTask(this)"></div>
+                    <span class="task-text">Lunch with Sarah at The Mercantile</span>
+                    <span class="task-time">12:30</span>
+                </div>
+                <div class="task-row">
+                    <div class="task-check" onclick="toggleTask(this)"></div>
+                    <span class="task-text">Project review with design team</span>
+                    <span class="task-time">16:00</span>
+                </div>
+                <div class="task-row">
+                    <div class="task-check done" onclick="toggleTask(this)"></div>
+                    <span class="task-text done">Gym — lower body</span>
+                    <span class="task-time">19:00</span>
+                </div>
+            </div>
+            
+            <div class="section">
+                <p class="section-label">Headlines</p>
+                <div class="space-y-6">
+                    <div>
+                        <p class="serif story-title">Global Climate Summit reaches tentative agreement on emissions timeline</p>
+                        <p class="story-meta">The Guardian · 2 hours ago</p>
+                    </div>
+                    <div>
+                        <p class="serif story-title">Markets steady as inflation data comes in below forecasts</p>
+                        <p class="story-meta">Reuters · 4 hours ago</p>
+                    </div>
+                    <div>
+                        <p class="serif story-title">Solid-state battery breakthrough promises 3x energy density at half the cost</p>
+                        <p class="story-meta">Ars Technica · 1 hour ago</p>
+                    </div>
+                    <div>
+                        <p class="serif story-title">City Council approves expanded bike lane network for downtown Denver</p>
+                        <p class="story-meta">Denver Post · 30 minutes ago</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <p class="section-label">From Reddit</p>
+                <div class="space-y-4">
+                    <div class="p-4 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors">
+                        <p class="text-xs text-orange-500 mb-1">r/space · highly upvoted</p>
+                        <p class="text-sm text-gray-700">"I worked on the Starship docking system. Here's what went wrong in the first three attempts."</p>
+                    </div>
+                    <div class="p-4 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors">
+                        <p class="text-xs text-orange-500 mb-1">r/personalfinance · trending</p>
+                        <p class="text-sm text-gray-700">"I automated my entire budget with a spreadsheet and it changed everything"</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <p class="section-label">This Week</p>
+                <div class="flex gap-2 text-center">
+                    <div class="flex-1 p-3 rounded-lg bg-gray-50">
+                        <p class="text-xs text-gray-400">Wed</p>
+                        <p class="text-lg font-light mt-1">75°</p>
+                    </div>
+                    <div class="flex-1 p-3 rounded-lg bg-gray-50">
+                        <p class="text-xs text-gray-400">Thu</p>
+                        <p class="text-lg font-light mt-1">71°</p>
+                    </div>
+                    <div class="flex-1 p-3 rounded-lg bg-gray-50">
+                        <p class="text-xs text-gray-400">Fri</p>
+                        <p class="text-lg font-light mt-1">68°</p>
+                    </div>
+                    <div class="flex-1 p-3 rounded-lg bg-gray-50">
+                        <p class="text-xs text-gray-400">Sat</p>
+                        <p class="text-lg font-light mt-1">74°</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section text-center pb-12">
+                <button class="expand-btn" onclick="toggleExpand()">Show less</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updateClock() {
+            const now = new Date();
+            const h = now.getHours();
+            const m = now.getMinutes().toString().padStart(2, '0');
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            const h12 = h % 12 || 12;
+            document.getElementById('clock').textContent = h12 + ':' + m;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+        
+        function toggleExpand() {
+            const container = document.getElementById('container');
+            const fullView = document.getElementById('fullView');
+            const btn = document.getElementById('expandBtn');
+            
+            if (fullView.classList.contains('open')) {
+                fullView.classList.remove('open');
+                container.classList.remove('expanded');
+                btn.textContent = 'See everything';
+                btn.style.display = '';
+            } else {
+                fullView.classList.add('open');
+                container.classList.add('expanded');
+                btn.style.display = 'none';
+            }
+        }
+        
+        function toggleTask(el) {
+            el.classList.toggle('done');
+            el.nextElementSibling.classList.toggle('done');
+        }
+    </script>
+</body>
+</html>
