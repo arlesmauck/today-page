@@ -6,15 +6,19 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - LATITUDE=39.7392
-      - LONGITUDE=-104.9903
-      - LOCATION_NAME=Denver, CO
-      - REFRESH_INTERVAL=900
-      - DATA_DIR=/app/data
+      LATITUDE: "39.7392"
+      LONGITUDE: "-104.9903"
+      LOCATION_NAME: "Denver, CO"
+      REFRESH_INTERVAL: "900"
+      DATA_DIR: "/app/data"
     volumes:
-      - ./data:/app/data
+      - /mnt/tank/apps/today-page/data:/app/data
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/api/health')"]
+      test:
+        - CMD
+        - python
+        - "-c"
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8080/api/health')"
       interval: 30s
       timeout: 5s
       retries: 3

@@ -1,113 +1,252 @@
 # Deploying to TrueNAS SCALE
 
-This guide walks you through deploying the Today Page dashboard on TrueNAS SCALE using a Custom App.
+This guide walks you through deploying the Today Page dashboard on TrueNAS SCALE.
 
 ## Prerequisites
 
 - TrueNAS SCALE with Apps enabled
-- Cloudflare Tunnel already configured (you're using it for other services)
+- Cloudflare Tunnel already configured
+- The Docker image package set to **public** on GitHub (see Step 0)
 
-## Step 1: Enable GitHub Container Registry Access
+---
 
-The Docker image is built automatically by GitHub Actions and pushed to GitHub Container Registry (GHCR).
+## Step 0: Make the GitHub Package Public (One-Time)
 
-The image is public, so no authentication is needed to pull it.
+The Docker image is stored in GitHub Container Registry. It must be public for TrueNAS to pull it without authentication.
 
-## Step 2: Deploy on TrueNAS SCALE
+1. Go to: **https://github.com/arlesmauck?tab=packages**
+2. Click **today-page**
+3. Click **Package settings** (top right)
+4. Under **Danger Zone** → **Change package visibility**
+5. Select **Public** → Click **I understand the consequences** → Click **Change visibility**
 
-### Option A: Using the Custom App UI (Recommended)
+---
 
-1. Open TrueNAS SCALE web UI
-2. Go to **Apps** → **Discover Apps** → **Custom App**
-3. Fill in the form:
+## Step 1: Prepare the Data Directory
 
-   **Application Name:** `today-page`
-
-   **Image Repository:** `ghcr.io/arlesmauck/today-page`
-
-   **Image Tag:** `latest`
-
-   **Container Environment Variables:**
-   | Variable | Value |
-   |----------|-------|
-   | `LATITUDE` | `39.7392` |
-   | `LONGITUDE` | `-104.9903` |
-   | `LOCATION_NAME` | `Denver, CO` |
-   | `REFRESH_INTERVAL` | `900` |
-   | `DATA_DIR` | `/app/data` |
-
-   **Port Forwarding:**
-   | Container Port | Node Port | Protocol |
-   |----------------|-----------|----------|
-   | `8080` | `8080` | TCP |
-
-   **Storage:**
-   | Host Path | Mount Path |
-   |-----------|------------|
-   | `/mnt/your-pool/apps/today-page/data` | `/app/data` |
-
-4. Click **Save**
-
-### Option B: Using docker-compose (CLI)
-
-SSH into your TrueNAS server and run:
+SSH into your TrueNAS server and create a folder for persistent data:
 
 ```bash
-mkdir -p /mnt/your-pool/apps/today-page
-cd /mnt/your-pool/apps/today-page
+# Replace /mnt/tank with your actual pool name
+mkdir -p /mnt/tank/apps/today-page/data
+```
 
-# Create docker-compose.yml (copy from the repo)
-nano docker-compose.yml
+---
+
+## Step 2: Deploy Using Docker Compose (Easiest Method)
+
+TrueNAS SCALE supports Docker Compose for Custom Apps.
+
+### Option A: Through the TrueNAS UI
+
+1. Open TrueNAS SCALE web UI
+2. Go to **Apps** → **Discover Apps**
+3. Click **Custom App** (top right)
+4. Switch to the **Docker Compose** tab
+5. Enter **Application Name:** `today-page`
+6. Paste the following YAML into the compose editor:
+
+```yaml
+services:
+  today-page:
+    image: ghcr.io/arlesmauck/today-page:latest
+    container_name: today-page
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      LATITUDE: "39.7392"
+      LONGITUDE: "-104.9903"
+      LOCATION_NAME: "Denver, CO"
+      REFRESH_INTERVAL: "900"
+      DATA_DIR: "/app/data"
+    volumes:
+      - /mnt/tank/apps/today-page/data:/app/data
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - "-c"
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8080/api/health')"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+```
+
+> **Important:** Change `/mnt/tank` in the `volumes` section to match your actual pool name.
+
+7. Click **Save**
+8. Wait for the container to start (30-60 seconds)
+
+### Option B: Through the TrueNAS Shell
+
+SSH into TrueNAS and run:
+
+```bash
+# Create the app directory
+mkdir -p /mnt/tank/apps/today-page
+cd /mnt/tank/apps/today-page
+
+# Create the compose file
+cat > docker-compose.yml << 'EOF'
+services:
+  today-page:
+    image: ghcr.io/arlesmauck/today-page:latest
+    container_name: today-page
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      LATITUDE: "39.7392"
+      LONGITUDE: "-104.9903"
+      LOCATION_NAME: "Denver, CO"
+      REFRESH_INTERVAL: "900"
+      DATA_DIR: "/app/data"
+    volumes:
+      - /mnt/tank/apps/today-page/data:/app/data
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - "-c"
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8080/api/health')"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+EOF
 
 # Start the app
 docker compose up -d
 ```
 
-## Step 3: Configure Cloudflare Tunnel
+---
 
-Add a route to your Cloudflare Tunnel config:
+## Step 3: Verify the App is Running
+
+### Check from TrueNAS
+
+```bash
+# Check container status
+docker ps | grep today-page
+
+# View logs
+docker logs today-page
+
+# Test the API
+curl http://localhost:8080/api/health
+```
+
+You should see:
+```json
+{"status": "ok", "weather_cached": true, "fetched_at": "2026-05-12T..."}
+```
+
+> **Note:** The first weather fetch takes 5-10 seconds after startup. If `weather_cached` is `false`, wait a moment and try again.
+
+---
+
+## Step 4: Configure Cloudflare Tunnel
+
+Add a route to your Cloudflare Tunnel config. The exact location depends on how you set up your tunnel.
+
+### If using `cloudflared` with a config file:
+
+Edit your config file (usually `/root/.cloudflared/config.yml`):
 
 ```yaml
-# In your cloudflared config.yml
+tunnel: <your-tunnel-id>
+credentials-file: /root/.cloudflared/<your-tunnel-id>.json
+
 ingress:
   - hostname: dash.arlesm.xyz
     service: http://localhost:8080
+
+  # Keep your existing routes above this line
   - service: http_status:404
 ```
 
-Then restart the tunnel:
+Restart the tunnel:
 
 ```bash
 sudo systemctl restart cloudflared
+# Or if using docker:
+docker restart cloudflared
 ```
 
-## Step 4: Verify
+### If using the TrueNAS Cloudflare Tunnel app:
 
-Visit `https://dash.arlesm.xyz` — you should see your dashboard with live Denver weather.
+1. Go to **Apps** → find your Cloudflare Tunnel app
+2. Edit the configuration
+3. Add a new public hostname:
+   - **Subdomain:** `dash`
+   - **Domain:** `arlesm.xyz`
+   - **Type:** HTTP
+   - **URL:** `localhost:8080`
+4. Save and wait for the tunnel to update
+
+---
+
+## Step 5: Access Your Dashboard
+
+Visit: **https://dash.arlesm.xyz**
+
+You should see your dashboard with live Denver weather.
+
+---
 
 ## Updating
 
 When you push new code to GitHub, a new Docker image is built automatically.
 
-To update on TrueNAS:
+### Update via TrueNAS UI:
 
 1. Go to **Apps** → **today-page**
-2. Click the three dots → **Upgrade**
-3. The new `latest` tag will be pulled
+2. Click the three dots → **Edit**
+3. Click **Save** → this pulls the latest image
 
-Or via CLI:
+### Update via shell:
 
 ```bash
-cd /mnt/your-pool/apps/today-page
+cd /mnt/tank/apps/today-page
 docker compose pull
 docker compose up -d
 ```
 
+---
+
 ## Troubleshooting
 
-| Problem | Solution |
-|---------|----------|
-| Weather shows "unavailable" | Check `/api/health` — weather may still be fetching (takes ~5-10s on first start) |
-| Container keeps restarting | Check logs: `docker logs today-page` |
-| Port 8080 already in use | Change the Node Port in TrueNAS to something else (e.g., 8081) |
-| Cloudflare shows 502 | Make sure the tunnel is pointing to the correct host/port |
+| Problem | What to Check |
+|---------|---------------|
+| "Image pull failed" | Make sure the GitHub package is **public** (Step 0) |
+| Weather shows "unavailable" | Wait 10-15 seconds after startup, then refresh. Check `/api/health`. |
+| Container keeps restarting | `docker logs today-page` — likely a port conflict or path issue |
+| Port 8080 already in use | Change the host port in docker-compose.yml to `8081:8080` |
+| Cloudflare shows 502 | Tunnel not routing correctly — verify `localhost:8080` is reachable from TrueNAS |
+| Wrong location weather | Update `LATITUDE`, `LONGITUDE`, and `LOCATION_NAME` env vars |
+
+### Check weather data directly
+
+```bash
+# From TrueNAS
+curl http://localhost:8080/api/weather | python3 -m json.tool
+
+# From your computer (after tunnel is working)
+curl https://dash.arlesm.xyz/api/weather | python3 -m json.tool
+```
+
+---
+
+## Customizing Your Location
+
+If you want weather for a different location, update these environment variables in the docker-compose YAML:
+
+| Variable | Example | How to find |
+|----------|---------|-------------|
+| `LATITUDE` | `39.7392` | Google Maps → right-click → first number |
+| `LONGITUDE` | `-104.9903` | Google Maps → right-click → second number |
+| `LOCATION_NAME` | `Denver, CO` | Whatever you want displayed |
+
+The National Weather Service API only works for US locations. For international locations, we'd switch to Open-Meteo (also free, no API key).
