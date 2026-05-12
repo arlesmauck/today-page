@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Today</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,400&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: #3d3d3d;
+            background: #fefefe;
+            -webkit-font-smoothing: antialiased;
+            line-height: 1.6;
+        }
+        .serif { font-family: 'Newsreader', Georgia, serif; }
+        .mono { font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace; }
+
+        .zen-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 24px;
+            max-width: 640px;
+            margin: 0 auto;
+            transition: justify-content 0.6s ease;
+        }
+        .zen-container.expanded {
+            justify-content: flex-start;
+            padding-top: 60px;
+        }
+
+        .greeting {
+            font-weight: 300;
+            font-size: 1.75rem;
+            color: #9ca3af;
+            letter-spacing: -0.02em;
+            margin-bottom: 4px;
+            opacity: 0;
+            animation: breatheIn 1s ease-out forwards;
+        }
+        .name {
+            font-weight: 400;
+            font-size: 2.25rem;
+            color: #1f1f1f;
+            letter-spacing: -0.03em;
+            margin-bottom: 24px;
+            opacity: 0;
+            animation: breatheIn 1s ease-out 0.2s forwards;
+        }
+
+        .time-display {
+            font-variant-numeric: tabular-nums;
+            font-weight: 300;
+            font-size: 4.5rem;
+            color: #e5e7eb;
+            line-height: 1;
+            letter-spacing: -0.04em;
+            margin-bottom: 40px;
+            opacity: 0;
+            animation: breatheIn 1s ease-out 0.4s forwards;
+        }
+
+        .essence {
+            width: 100%;
+            opacity: 0;
+            animation: breatheIn 1s ease-out 0.6s forwards;
+        }
+
+        .essence-item {
+            padding: 18px 0;
+            border-bottom: 1px solid #f3f4f6;
+            transition: padding-left 0.3s ease;
+        }
+        .essence-item:hover { padding-left: 8px; }
+        .essence-item:last-child { border-bottom: none; }
+
+        .weather-line {
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+        }
+        .weather-temp {
+            font-size: 2.75rem;
+            font-weight: 300;
+            color: #1f1f1f;
+            line-height: 1;
+        }
+        .weather-desc {
+            font-size: 1rem;
+            color: #9ca3af;
+        }
+        .weather-meta {
+            font-size: 0.8rem;
+            color: #d1d5db;
+            margin-top: 4px;
+        }
+
+        .expand-btn {
+            margin-top: 40px;
+            padding: 10px 24px;
+            border: 1px solid #e5e7eb;
+            border-radius: 100px;
+            background: transparent;
+            color: #9ca3af;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            opacity: 0;
+            animation: breatheIn 1s ease-out 0.8s forwards;
+        }
+        .expand-btn:hover {
+            border-color: #d1d5db;
+            color: #6b7280;
+            background: #fafafa;
+        }
+
+        .full-view {
+            width: 100%;
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            transition: max-height 0.8s ease, opacity 0.6s ease;
+        }
+        .full-view.open {
+            max-height: 3000px;
+            opacity: 1;
+        }
+
+        .section { margin-bottom: 40px; }
+        .section-label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: #d1d5db;
+            margin-bottom: 16px;
+        }
+
+        .forecast-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+        }
+        .forecast-day {
+            text-align: center;
+            padding: 12px 4px;
+            border-radius: 8px;
+            background: #f9fafb;
+            transition: background 0.2s;
+        }
+        .forecast-day:hover { background: #f3f4f6; }
+        .forecast-day-name {
+            font-size: 0.7rem;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .forecast-temp {
+            font-size: 1.1rem;
+            font-weight: 400;
+            color: #1f1f1f;
+            margin-top: 4px;
+        }
+        .forecast-desc {
+            font-size: 0.7rem;
+            color: #9ca3af;
+            margin-top: 2px;
+        }
+
+        .story-title {
+            font-size: 1.05rem;
+            line-height: 1.4;
+            color: #1f1f1f;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .story-title:hover { color: #6b7280; }
+        .story-meta {
+            font-size: 0.75rem;
+            color: #d1d5db;
+            margin-top: 4px;
+        }
+
+        .loading {
+            color: #d1d5db;
+            font-size: 0.9rem;
+        }
+        .error {
+            color: #ef4444;
+            font-size: 0.85rem;
+        }
+        .stale {
+            color: #f59e0b;
+            font-size: 0.75rem;
+        }
+
+        .task-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid #f9fafb;
+        }
+        .task-row:last-child { border-bottom: none; }
+        .task-check {
+            width: 18px;
+            height: 18px;
+            border: 1.5px solid #e5e7eb;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .task-check:hover { border-color: #9ca3af; }
+        .task-check.done { background: #e5e7eb; border-color: #e5e7eb; }
+        .task-text {
+            font-size: 0.9rem;
+            color: #3d3d3d;
+            transition: all 0.2s;
+        }
+        .task-text.done { text-decoration: line-through; color: #d1d5db; }
+        .task-time {
+            font-size: 0.75rem;
+            color: #d1d5db;
+            margin-left: auto;
+        }
+
+        .status-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 8px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.7rem;
+            color: #d1d5db;
+            background: rgba(254,254,254,0.9);
+            backdrop-filter: blur(4px);
+            border-top: 1px solid #f3f4f6;
+        }
+
+        @keyframes breatheIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="zen-container" id="container">
+        <p class="greeting">Good morning</p>
+        <h1 class="name">Arles</h1>
+
+        <div class="time-display" id="clock">--:--</div>
+
+        <div class="essence">
+            <!-- Weather -->
+            <div class="essence-item" id="weather-container">
+                <div class="weather-line">
+                    <span class="weather-temp" id="weather-temp">--°</span>
+                    <span class="weather-desc" id="weather-desc">Loading weather...</span>
+                </div>
+                <p class="weather-meta" id="weather-meta"></p>
+            </div>
+
+            <!-- Quick calendar preview -->
+            <div class="essence-item">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-400">Today</p>
+                        <p class="text-base text-gray-800">3 events scheduled</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm text-gray-400">Next</p>
+                        <p class="text-base text-gray-800">Standup at 9:00 AM</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top headline placeholder -->
+            <div class="essence-item">
+                <p class="serif story-title">James Webb Telescope detects atmospheric biosignatures on exoplanet K2-18b</p>
+                <p class="story-meta">Nature · 3 hours ago</p>
+            </div>
+        </div>
+
+        <button class="expand-btn" id="expandBtn" onclick="toggleExpand()">See everything</button>
+
+        <div class="full-view" id="fullView">
+            <div class="section">
+                <p class="section-label">5-Day Forecast</p>
+                <div class="forecast-grid" id="forecast-grid">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <div class="section">
+                <p class="section-label">Your Day</p>
+                <div class="task-row">
+                    <div class="task-check" onclick="toggleTask(this)"></div>
+                    <span class="task-text">Team standup — Answer Engineering</span>
+                    <span class="task-time">09:00</span>
+                </div>
+                <div class="task-row">
+                    <div class="task-check" onclick="toggleTask(this)"></div>
+                    <span class="task-text">Lunch with Sarah at The Mercantile</span>
+                    <span class="task-time">12:30</span>
+                </div>
+                <div class="task-row">
+                    <div class="task-check" onclick="toggleTask(this)"></div>
+                    <span class="task-text">Project review with design team</span>
+                    <span class="task-time">16:00</span>
+                </div>
+            </div>
+
+            <div class="section">
+                <p class="section-label">Headlines</p>
+                <div class="space-y-5">
+                    <div>
+                        <p class="serif story-title">Global Climate Summit reaches tentative agreement on emissions timeline</p>
+                        <p class="story-meta">The Guardian · 2 hours ago</p>
+                    </div>
+                    <div>
+                        <p class="serif story-title">Markets steady as inflation data comes in below forecasts</p>
+                        <p class="story-meta">Reuters · 4 hours ago</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section text-center pb-12">
+                <button class="expand-btn" onclick="toggleExpand()">Show less</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <span id="status-weather">Weather: loading...</span>
+        <span id="status-location">Denver, CO</span>
+    </div>
+
+    <script>
+        // Clock
+        function updateClock() {
+            const now = new Date();
+            const h = now.getHours();
+            const m = now.getMinutes().toString().padStart(2, '0');
+            const h12 = h % 12 || 12;
+            document.getElementById('clock').textContent = h12 + ':' + m;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Weather fetch
+        async function loadWeather() {
+            try {
+                const resp = await fetch('/api/weather');
+                if (!resp.ok) throw new Error('Weather API error');
+                const data = await resp.json();
+                renderWeather(data);
+            } catch (e) {
+                document.getElementById('weather-desc').textContent = 'Weather unavailable';
+                document.getElementById('status-weather').textContent = 'Weather: error';
+                console.error('Weather load failed:', e);
+            }
+        }
+
+        function renderWeather(data) {
+            const current = data.current || {};
+            const temp = current.temperature_f ?? '--';
+            const desc = current.description || 'No description';
+            const humidity = current.humidity;
+            const wind = current.wind_speed_mph;
+
+            document.getElementById('weather-temp').textContent = Math.round(temp) + '°';
+            document.getElementById('weather-desc').textContent = desc;
+
+            let meta = data.location || 'Denver, CO';
+            if (humidity != null) meta += ` · ${humidity}% humidity`;
+            if (wind != null) meta += ` · ${Math.round(wind)} mph wind`;
+            document.getElementById('weather-meta').textContent = meta;
+
+            // Status bar
+            const fetched = data.fetched_at ? new Date(data.fetched_at) : null;
+            const age = fetched ? Math.round((Date.now() - fetched) / 60000) : null;
+            let statusText = 'Weather: ';
+            if (age != null) {
+                statusText += age < 2 ? 'live' : `${age} min ago`;
+            } else {
+                statusText += 'cached';
+            }
+            document.getElementById('status-weather').textContent = statusText;
+
+            // Forecast grid
+            const grid = document.getElementById('forecast-grid');
+            grid.innerHTML = '';
+            const days = data.daily?.slice(0, 5) || [];
+            days.forEach(day => {
+                const el = document.createElement('div');
+                el.className = 'forecast-day';
+                el.innerHTML = `
+                    <div class="forecast-day-name">${day.name || ''}</div>
+                    <div class="forecast-temp">${day.temp_f ?? '--'}°</div>
+                    <div class="forecast-desc">${day.short_desc || ''}</div>
+                `;
+                grid.appendChild(el);
+            });
+        }
+
+        // Expand/collapse
+        function toggleExpand() {
+            const container = document.getElementById('container');
+            const fullView = document.getElementById('fullView');
+            const btn = document.getElementById('expandBtn');
+
+            if (fullView.classList.contains('open')) {
+                fullView.classList.remove('open');
+                container.classList.remove('expanded');
+                btn.style.display = '';
+            } else {
+                fullView.classList.add('open');
+                container.classList.add('expanded');
+                btn.style.display = 'none';
+            }
+        }
+
+        // Task toggle
+        function toggleTask(el) {
+            el.classList.toggle('done');
+            el.nextElementSibling.classList.toggle('done');
+        }
+
+        // Init
+        loadWeather();
+    </script>
+</body>
+</html>
