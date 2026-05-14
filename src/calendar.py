@@ -104,7 +104,7 @@ def load_calendar_urls() -> list[str]:
 
 
 async def fetch_all_calendars() -> dict:
-    """Fetch events from all configured calendars for today and tomorrow."""
+    """Fetch events from all configured calendars for today and upcoming days."""
     urls = load_calendar_urls()
     now = datetime.now(timezone.utc)
     today = now.date()
@@ -112,6 +112,7 @@ async def fetch_all_calendars() -> dict:
     
     all_today = []
     all_tomorrow = []
+    all_lookahead = []  # next 7 days after tomorrow
     
     for url in urls:
         try:
@@ -120,6 +121,15 @@ async def fetch_all_calendars() -> dict:
             tomorrow_events = extract_events(ical_text, tomorrow)
             all_today.extend(today_events)
             all_tomorrow.extend(tomorrow_events)
+            
+            # Look ahead: days 2-7 after today
+            for offset in range(2, 8):
+                look_date = (now + timedelta(days=offset)).date()
+                look_events = extract_events(ical_text, look_date)
+                for ev in look_events:
+                    ev["_look_day"] = look_date
+                    ev["_look_day_name"] = look_date.strftime("%A")
+                all_lookahead.extend(look_events)
         except Exception:
             # Skip failed calendars silently for now
             continue
@@ -127,10 +137,12 @@ async def fetch_all_calendars() -> dict:
     # Deduplicate and sort
     all_today.sort(key=lambda e: e["start"])
     all_tomorrow.sort(key=lambda e: e["start"])
+    all_lookahead.sort(key=lambda e: (e["_look_day"], e["start"]))
     
     return {
         "today": all_today,
         "tomorrow": all_tomorrow,
+        "lookahead": all_lookahead,
         "fetched_at": now.isoformat(),
     }
 

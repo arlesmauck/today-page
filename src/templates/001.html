@@ -119,6 +119,14 @@
             color: #aaa;
             font-style: italic;
         }
+        .lookahead {
+            margin-top: 1.25rem;
+            padding-top: 1.25rem;
+            border-top: 1px solid #e8e4dc;
+        }
+        .lookahead-title {
+            color: #bbb;
+        }
 
         /* News tabs */
         .tabs {
@@ -224,6 +232,18 @@
             {% endfor %}
             {% if not events_today %}
             <p class="empty-msg">Nothing scheduled today.</p>
+            {% endif %}
+
+            {% if events_lookahead %}
+            <div class="lookahead">
+                <p class="section-title lookahead-title">Coming Up</p>
+                {% for event in events_lookahead %}
+                <div class="event">
+                    <span class="event-time">{{ event.day }}</span>
+                    <span class="event-title">{{ event.summary }}</span>
+                </div>
+                {% endfor %}
+            </div>
             {% endif %}
         </section>
 
