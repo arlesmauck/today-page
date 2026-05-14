@@ -11,7 +11,7 @@ from src.calendar import load_calendar
 
 
 TEMPLATE_DIR = BASE_DIR / "src" / "templates"
-OUTPUT_FILE = BASE_DIR / "src" / "static" / "index.html"
+OUTPUT_FILE = BASE_DIR / "index.html"
 
 
 def format_time(dt_str: str) -> str:
