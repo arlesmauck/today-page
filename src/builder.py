@@ -32,21 +32,20 @@ def build_page() -> str:
     weather = load_weather()
     current = weather.get("current", {}) if weather else {}
     
-    # Load calendar
     cal = load_calendar()
     events_today = []
     events_lookahead = []
     if cal:
         for ev in cal.get("today", []):
             events_today.append({
-                "time": format_time(ev["start"]),
+                "time": "All day" if ev.get("all_day") else format_time(ev["start"]),
                 "summary": ev["summary"],
                 "location": ev.get("location", ""),
             })
-        for ev in cal.get("lookahead", [])[:8]:  # limit to 8 upcoming events
+        for ev in cal.get("lookahead", [])[:8]:
             events_lookahead.append({
                 "day": ev.get("_look_day_name", ""),
-                "time": format_time(ev["start"]),
+                "time": "All day" if ev.get("all_day") else format_time(ev["start"]),
                 "summary": ev["summary"],
                 "location": ev.get("location", ""),
             })

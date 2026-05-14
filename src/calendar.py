@@ -50,30 +50,65 @@ def extract_events(ical_text: str, target_date: date) -> list[dict]:
         if not dtstart:
             continue
         
-        start_dt = normalize_dt(dtstart.dt)
-        end_dt = normalize_dt(dtend.dt) if dtend else None
+        start_value = dtstart.dt
+        end_value = dtend.dt if dtend else None
         
-        # Check if event is on target_date (using UTC date for simplicity)
-        if start_dt.date() == target_date:
-            events.append({
-                "summary": summary,
-                "start": start_dt,
-                "end": end_dt,
-                "location": location,
-                "description": description,
-            })
-        # Also check recurring events that might span into today
-        elif end_dt and start_dt.date() <= target_date <= end_dt.date():
-            events.append({
-                "summary": summary,
-                "start": start_dt,
-                "end": end_dt,
-                "location": location,
-                "description": description,
-            })
+        # Detect all-day events: DTSTART is a date, not a datetime
+        is_all_day = isinstance(start_value, date) and not isinstance(start_value, datetime)
+        
+        if is_all_day:
+            # All-day events: compare raw dates, no timezone conversion
+            if start_value == target_date:
+                events.append({
+                    "summary": summary,
+                    "start": None,
+                    "end": None,
+                    "location": location,
+                    "description": description,
+                    "all_day": True,
+                    "all_day_date": str(start_value),
+                })
+            # Multi-day all-day events spanning target date
+            elif end_value and isinstance(end_value, date):
+                if start_value <= target_date < end_value:
+                    events.append({
+                        "summary": summary,
+                        "start": None,
+                        "end": None,
+                        "location": location,
+                        "description": description,
+                        "all_day": True,
+                        "all_day_date": str(start_value),
+                    })
+        else:
+            # Timed events: convert to timezone-aware datetime
+            start_dt = normalize_dt(start_value)
+            end_dt = normalize_dt(end_value) if end_value else None
+            
+            if start_dt.date() == target_date:
+                events.append({
+                    "summary": summary,
+                    "start": start_dt,
+                    "end": end_dt,
+                    "location": location,
+                    "description": description,
+                    "all_day": False,
+                    "all_day_date": None,
+                })
+            # Timed events that span across target date
+            elif end_dt and start_dt.date() <= target_date <= end_dt.date():
+                events.append({
+                    "summary": summary,
+                    "start": start_dt,
+                    "end": end_dt,
+                    "location": location,
+                    "description": description,
+                    "all_day": False,
+                    "all_day_date": None,
+                })
     
-    # Sort by start time
-    events.sort(key=lambda e: e["start"])
+    # Sort: all-day events first, then timed events by start time
+    events.sort(key=lambda e: (0 if e["all_day"] else 1, e["start"] or datetime.min.replace(tzinfo=timezone.utc)))
     return events
 
 
@@ -134,10 +169,10 @@ async def fetch_all_calendars() -> dict:
             # Skip failed calendars silently for now
             continue
     
-    # Deduplicate and sort
-    all_today.sort(key=lambda e: e["start"])
-    all_tomorrow.sort(key=lambda e: e["start"])
-    all_lookahead.sort(key=lambda e: (e["_look_day"], e["start"]))
+    # Sort: all-day events first, then timed events by start time
+    all_today.sort(key=lambda e: (0 if e["all_day"] else 1, e["start"].isoformat() if e["start"] else ""))
+    all_tomorrow.sort(key=lambda e: (0 if e["all_day"] else 1, e["start"].isoformat() if e["start"] else ""))
+    all_lookahead.sort(key=lambda e: (e["_look_day"], 0 if e["all_day"] else 1, e["start"].isoformat() if e["start"] else ""))
     
     return {
         "today": all_today,
