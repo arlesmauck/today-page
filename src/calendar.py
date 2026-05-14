@@ -6,7 +6,7 @@ from pathlib import Path
 import httpx
 from icalendar import Calendar
 
-from src.config import DATA_DIR
+from src.config import DATA_DIR, TIMEZONE
 
 
 def normalize_dt(dt) -> datetime:
@@ -141,7 +141,7 @@ def load_calendar_urls() -> list[str]:
 async def fetch_all_calendars() -> dict:
     """Fetch events from all configured calendars for today and upcoming days."""
     urls = load_calendar_urls()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(TIMEZONE)
     today = now.date()
     tomorrow = (now + timedelta(days=1)).date()
     
@@ -178,7 +178,7 @@ async def fetch_all_calendars() -> dict:
         "today": all_today,
         "tomorrow": all_tomorrow,
         "lookahead": all_lookahead,
-        "fetched_at": now.isoformat(),
+        "fetched_at": now.astimezone().isoformat(),
     }
 
 

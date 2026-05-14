@@ -23,3 +23,7 @@ PORT = int(os.getenv("PORT", "8080"))
 
 # Refresh interval (seconds)
 REFRESH_INTERVAL = int(os.getenv("REFRESH_INTERVAL", "3600"))  # 1 hour
+
+# Timezone for date display / "today" determinations
+from zoneinfo import ZoneInfo
+TIMEZONE = ZoneInfo(os.getenv("TIMEZONE", "America/Denver"))

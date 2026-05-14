@@ -5,7 +5,7 @@ from pathlib import Path
 
 import jinja2
 
-from src.config import BASE_DIR, DATA_DIR, LOCATION_NAME
+from src.config import BASE_DIR, DATA_DIR, LOCATION_NAME, TIMEZONE
 from src.fetcher import load_weather
 from src.calendar import load_calendar
 
@@ -26,7 +26,7 @@ def format_time(dt_str: str) -> str:
 
 def build_page() -> str:
     """Fetch data and render the HTML page."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(TIMEZONE)
     
     # Load weather
     weather = load_weather()
