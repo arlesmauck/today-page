@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Morning Paper</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Crimson Text', Georgia, serif;
+            color: #2d2d2d;
+            background: #f7f5f0;
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+        }
+        .sans { font-family: 'Inter', sans-serif; }
+        .paper-shadow {
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06);
+        }
+        .section-title {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: #999;
+            margin-bottom: 1.5rem;
+        }
+        .story-card {
+            padding: 2rem 0;
+            border-bottom: 1px solid #e8e4dc;
+            transition: background 0.2s;
+        }
+        .story-card:hover { background: rgba(255,255,255,0.5); }
+        .story-card:last-child { border-bottom: none; }
+        .story-headline {
+            font-size: 1.5rem;
+            line-height: 1.3;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #2d2d2d;
+        }
+        .story-lede {
+            font-size: 1.05rem;
+            color: #555;
+            line-height: 1.6;
+        }
+        .story-source {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #aaa;
+            margin-bottom: 0.5rem;
+        }
+        .weather-big { font-size: 3rem; font-weight: 300; line-height: 1; }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div class="max-w-2xl mx-auto px-8 py-16">
+        <!-- Masthead -->
+        <header class="text-center mb-16 fade-in">
+            <p class="sans text-xs uppercase tracking-[0.3em] text-gray-400 mb-2">Thursday, May 14, 2026</p>
+            <h1 class="text-5xl font-normal tracking-tight text-gray-800" style="font-family: 'Crimson Text', serif;">Good Morning, Arles</h1>
+            <div class="w-16 h-px bg-gray-300 mx-auto mt-6"></div>
+        </header>
+
+        <!-- Weather -->
+        <section class="mb-16">
+            <div class="paper-shadow bg-white rounded-sm p-8">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="section-title">Denver, CO</p>
+                        <div class="flex items-baseline gap-4">
+                            <span class="weather-big">62°</span>
+                            <span class="text-lg text-gray-500">Mostly sunny</span>
+                        </div>
+                        <div class="sans text-sm text-gray-400 mt-2 flex gap-4">
+                            <span>H: 78°</span>
+                            <span>Wind 8 mph</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Calendar -->
+        <section class="mb-16">
+            <div class="paper-shadow bg-white rounded-sm p-8">
+                <p class="section-title">What's Happening Today</p>
+                <div class="space-y-3">
+                    
+                    
+                    <p class="text-gray-400 italic">Nothing scheduled today.</p>
+                    
+                </div>
+            </div>
+        </section>
+
+        <!-- News -->
+        <section class="mb-16">
+            <div class="flex gap-6 mb-8 border-b border-gray-200">
+                <span class="tab active">World</span>
+                <span class="tab">Science & Tech</span>
+                <span class="tab">Denver</span>
+            </div>
+            <div>
+                
+                <div class="story-card">
+                    <p class="story-source">Reuters · 2 hours ago</p>
+                    <h2 class="story-headline">House Passes Revised Aerospace Funding Bill</h2>
+                    <p class="story-lede">Bipartisan support for a $28 billion package focused on small satellite launch infrastructure.</p>
+                </div>
+                
+                <div class="story-card">
+                    <p class="story-source">AP News · 4 hours ago</p>
+                    <h2 class="story-headline">NOAA Forecasts Quieter-Than-Average Hurricane Season</h2>
+                    <p class="story-lede">Forecasters predict 11 named storms, below the 14-storm average.</p>
+                </div>
+                
+            </div>
+        </section>
+
+        <footer class="text-center py-12 border-t border-gray-200">
+            <p class="sans text-xs text-gray-400 tracking-wide">Updated at 9:13 PM</p>
+            <p class="sans text-xs text-gray-300 mt-2 italic">"No algorithms. No clickbait. Just what matters."</p>
+        </footer>
+    </div>
+</body>
+</html>
