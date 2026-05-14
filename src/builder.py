@@ -1,6 +1,6 @@
 """Build the static index.html from template + live data."""
-import json
 from datetime import datetime, timezone
+from itertools import groupby
 from pathlib import Path
 
 import jinja2
@@ -42,13 +42,44 @@ def build_page() -> str:
                 "summary": ev["summary"],
                 "location": ev.get("location", ""),
             })
-        for ev in cal.get("lookahead", [])[:8]:
-            events_lookahead.append({
-                "day": ev.get("_look_day_name", ""),
-                "time": "All day" if ev.get("all_day") else format_time(ev["start"]),
-                "summary": ev["summary"],
-                "location": ev.get("location", ""),
+        
+        # Group lookahead events by day in Python (preserves chronological order by date)
+        def _key(ev):
+            return ev.get("_look_day", ""), ev.get("_look_day_name", "")
+        
+        grouped = []
+        all_lookahead = cal.get("lookahead", [])
+        sorted_events = sorted(all_lookahead, key=lambda e: (e.get("_look_day", ""), 0 if e.get("all_day") else 1, str(e.get("start", ""))))
+        for (date_str, day_name), evs in groupby(sorted_events, key=_key):
+            grouped.append({
+                "day": day_name,
+                "events": [
+                    {
+                        "time": "All day" if ev.get("all_day") else format_time(ev["start"]),
+                        "summary": ev["summary"],
+                        "location": ev.get("location", ""),
+                    }
+                    for ev in evs
+                ]
             })
+        
+        # Limit to first 8 event instances (not days) for brevity
+        total = 0
+        for g in grouped:
+            total += len(g["events"])
+        if total > 8:
+            trimmed = []
+            count = 0
+            for g in grouped:
+                if count >= 8:
+                    break
+                remaining = 8 - count
+                g["events"] = g["events"][:remaining]
+                trimmed.append(g)
+                count += len(g["events"])
+            grouped = trimmed
+        
+        events_lookahead = grouped
     
     # Static news for now (placeholder)
     news = [

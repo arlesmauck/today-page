@@ -237,11 +237,11 @@
             {% if events_lookahead %}
             <div class="lookahead">
                 <p class="section-title lookahead-title">Coming Up</p>
-                {% for day, day_events in events_lookahead|groupby('day') %}
-                {% for event in day_events %}
+                {% for day_group in events_lookahead %}
+                {% for event in day_group.events %}
                 <div class="event">
                     {% if loop.first %}
-                    <span class="event-time">{{ day }}</span>
+                    <span class="event-time">{{ day_group.day }}</span>
                     {% else %}
                     <span class="event-time empty-label">—</span>
                     {% endif %}
