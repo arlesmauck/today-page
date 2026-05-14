@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Your Morning Paper</title>
+    <title>{{ title }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
     <style>
@@ -61,8 +61,8 @@
     <div class="max-w-2xl mx-auto px-8 py-16">
         <!-- Masthead -->
         <header class="text-center mb-16 fade-in">
-            <p class="sans text-xs uppercase tracking-[0.3em] text-gray-400 mb-2">Thursday, May 14, 2026</p>
-            <h1 class="text-5xl font-normal tracking-tight text-gray-800" style="font-family: 'Crimson Text', serif;">Good Morning, Arles</h1>
+            <p class="sans text-xs uppercase tracking-[0.3em] text-gray-400 mb-2">{{ date_str }}</p>
+            <h1 class="text-5xl font-normal tracking-tight text-gray-800" style="font-family: 'Crimson Text', serif;">{{ greeting }}</h1>
             <div class="w-16 h-px bg-gray-300 mx-auto mt-6"></div>
         </header>
 
@@ -71,14 +71,14 @@
             <div class="paper-shadow bg-white rounded-sm p-8">
                 <div class="flex items-start justify-between">
                     <div>
-                        <p class="section-title">Denver, CO</p>
+                        <p class="section-title">{{ location }}</p>
                         <div class="flex items-baseline gap-4">
-                            <span class="weather-big">62°</span>
-                            <span class="text-lg text-gray-500">Mostly sunny</span>
+                            <span class="weather-big">{{ weather.temp_f|round|int }}°</span>
+                            <span class="text-lg text-gray-500">{{ weather.description }}</span>
                         </div>
                         <div class="sans text-sm text-gray-400 mt-2 flex gap-4">
-                            <span>H: 78°</span>
-                            <span>Wind 8 mph</span>
+                            {% if weather.humidity %}<span>H: {{ weather.temp_high or '--' }}°</span>{% endif %}
+                            {% if weather.wind_speed_mph %}<span>Wind {{ weather.wind_speed_mph|round|int }} mph</span>{% endif %}
                         </div>
                     </div>
                 </div>
@@ -90,10 +90,15 @@
             <div class="paper-shadow bg-white rounded-sm p-8">
                 <p class="section-title">What's Happening Today</p>
                 <div class="space-y-3">
-                    
-                    
+                    {% for event in events_today %}
+                    <div class="flex gap-4 items-baseline">
+                        <span class="sans text-sm text-gray-400 w-16">{{ event.time }}</span>
+                        <span class="text-lg">{{ event.summary }}</span>
+                    </div>
+                    {% endfor %}
+                    {% if not events_today %}
                     <p class="text-gray-400 italic">Nothing scheduled today.</p>
-                    
+                    {% endif %}
                 </div>
             </div>
         </section>
@@ -106,24 +111,18 @@
                 <span class="tab">Denver</span>
             </div>
             <div>
-                
+                {% for story in news %}
                 <div class="story-card">
-                    <p class="story-source">Reuters · 2 hours ago</p>
-                    <h2 class="story-headline">House Passes Revised Aerospace Funding Bill</h2>
-                    <p class="story-lede">Bipartisan support for a $28 billion package focused on small satellite launch infrastructure.</p>
+                    <p class="story-source">{{ story.source }} · {{ story.when }}</p>
+                    <h2 class="story-headline">{{ story.headline }}</h2>
+                    <p class="story-lede">{{ story.lede }}</p>
                 </div>
-                
-                <div class="story-card">
-                    <p class="story-source">AP News · 4 hours ago</p>
-                    <h2 class="story-headline">NOAA Forecasts Quieter-Than-Average Hurricane Season</h2>
-                    <p class="story-lede">Forecasters predict 11 named storms, below the 14-storm average.</p>
-                </div>
-                
+                {% endfor %}
             </div>
         </section>
 
         <footer class="text-center py-12 border-t border-gray-200">
-            <p class="sans text-xs text-gray-400 tracking-wide">Updated at 9:10 PM</p>
+            <p class="sans text-xs text-gray-400 tracking-wide">Updated at {{ updated_at }}</p>
             <p class="sans text-xs text-gray-300 mt-2 italic">"No algorithms. No clickbait. Just what matters."</p>
         </footer>
     </div>
