@@ -34,6 +34,7 @@ def build_page() -> str:
     
     cal = load_calendar()
     events_today = []
+    events_tomorrow = []
     events_lookahead = []
     if cal:
         for ev in cal.get("today", []):
@@ -42,7 +43,14 @@ def build_page() -> str:
                 "summary": ev["summary"],
                 "location": ev.get("location", ""),
             })
-        
+
+        for ev in cal.get("tomorrow", []):
+            events_tomorrow.append({
+                "time": "All day" if ev.get("all_day") else format_time(ev["start"]),
+                "summary": ev["summary"],
+                "location": ev.get("location", ""),
+            })
+
         # Group lookahead events by day in Python (preserves chronological order by date)
         def _key(ev):
             return ev.get("_look_day", ""), ev.get("_look_day_name", "")
@@ -114,6 +122,7 @@ def build_page() -> str:
             "humidity": current.get("humidity") or 18,
         },
         events_today=events_today,
+        events_tomorrow=events_tomorrow,
         events_lookahead=events_lookahead,
         news=news,
         updated_at=now.astimezone().strftime("%I:%M %p").lstrip("0"),

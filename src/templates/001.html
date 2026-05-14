@@ -234,6 +234,18 @@
             <p class="empty-msg">Nothing scheduled today.</p>
             {% endif %}
 
+            {% if events_tomorrow %}
+            <div class="tomorrow">
+                <p class="section-title lookahead-title">Tomorrow</p>
+                {% for event in events_tomorrow %}
+                <div class="event">
+                    <span class="event-time">{{ event.time }}</span>
+                    <span class="event-title">{{ event.summary }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
             {% if events_lookahead %}
             <div class="lookahead">
                 <p class="section-title lookahead-title">Coming Up</p>
