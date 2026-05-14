@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Good Morning, Arles</title>
+    <style>
+        :root {
+            --bg: #fdfcf8;
+            --text: #2c2c2c;
+            --muted: #6b6b6b;
+            --accent: #4a6fa5;
+            --border: #e5e5e5;
+            --card-bg: #ffffff;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 3rem 1.5rem;
+        }
+        .container {
+            max-width: 680px;
+            margin: 0 auto;
+        }
+        header {
+            margin-bottom: 3rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+        h1 {
+            font-size: 1.75rem;
+            font-weight: 400;
+            color: var(--muted);
+        }
+        .date {
+            font-size: 2.5rem;
+            font-weight: 300;
+            letter-spacing: -0.5px;
+            margin-top: 0.25rem;
+        }
+        .meta {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1.5rem;
+            font-size: 0.95rem;
+            color: var(--muted);
+        }
+        .meta-item strong {
+            color: var(--text);
+            display: block;
+            font-weight: 500;
+            margin-bottom: 0.1rem;
+        }
+        section {
+            margin-bottom: 3rem;
+        }
+        h2 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--muted);
+            margin-bottom: 1rem;
+            font-weight: 500;
+        }
+        .news-list {
+            list-style: none;
+        }
+        .news-list li {
+            padding: 1.25rem 0;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 1rem;
+        }
+        .news-list li:last-child { border-bottom: none; }
+        .news-source {
+            font-size: 0.75rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+        .event {
+            display: flex;
+            gap: 1rem;
+            padding: 0.75rem 0;
+        }
+        .event-time {
+            font-variant-numeric: tabular-nums;
+            color: var(--accent);
+            font-weight: 500;
+            min-width: 4.5rem;
+        }
+        .event-title { color: var(--text); }
+        .footnote {
+            margin-top: 4rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.8rem;
+            color: var(--muted);
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Good Morning</h1>
+            <div class="date">Wednesday, May 14</div>
+            <div class="meta">
+                <div class="meta-item">
+                    <strong>Denver</strong>
+                    62°F, Mostly Sunny
+                </div>
+                <div class="meta-item">
+                    <strong>Sunrise / Sunset</strong>
+                    5:47 AM / 8:12 PM
+                </div>
+            </div>
+        </header>
+
+        <section>
+            <h2>Today</h2>
+            <div class="event">
+                <span class="event-time">10:00 AM</span>
+                <span class="event-title">Status meeting with propulsion team</span>
+            </div>
+            <div class="event">
+                <span class="event-time">12:30 PM</span>
+                <span class="event-title">Lunch with Sarah downtown</span>
+            </div>
+            <div class="event">
+                <span class="event-time">6:00 PM</span>
+                <span class="event-title">Home server tinkering time</span>
+            </div>
+        </section>
+
+        <section>
+            <h2>In the World</h2>
+            <ul class="news-list">
+                <li>
+                    <span>House passes revised aerospace funding bill with bipartisan support</span>
+                    <span class="news-source">Reuters</span>
+                </li>
+                <li>
+                    <span>NOAA forecasts quieter-than-average Atlantic hurricane season</span>
+                    <span class="news-source">AP News</span>
+                </li>
+                <li>
+                    <span>International Space Station crew completes spacewalk to upgrade solar arrays</span>
+                    <span class="news-source">SpaceNews</span>
+                </li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>One Good Read</h2>
+            <p style="font-size: 1.05rem; color: var(--text); line-height: 1.7;">
+                "The Quiet Resurgence of Supersonic Flight Over Colorado" — 
+                A long look at how smaller aerospace firms are bringing back commercial supersonic travel, and why the Front Range has become an unlikely hub for testing. <span style="color: var(--accent); font-size: 0.9rem;">(20 min read)</span>
+            </p>
+        </section>
+
+        <div class="footnote">
+            Updated at 6:00 AM &middot; No algorithms. No clickbait. Just what matters.
+        </div>
+    </div>
+</body>
+</html>
