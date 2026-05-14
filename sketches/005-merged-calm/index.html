@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Today — Arles</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f7f5f0;
+            --card: #ffffff;
+            --text: #2d2d2d;
+            --muted: #6b6b6b;
+            --faint: #999;
+            --border: #e8e4dc;
+            --accent: #8b7355;
+            --sans: 'Inter', -apple-system, sans-serif;
+            --serif: 'Crimson Text', Georgia, serif;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: var(--serif);
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.65;
+            -webkit-font-smoothing: antialiased;
+            padding: 3rem 1.5rem;
+        }
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+        }
+
+        /* Masthead */
+        header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .date-line {
+            font-family: var(--sans);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: var(--faint);
+            margin-bottom: 0.5rem;
+        }
+        h1 {
+            font-family: var(--serif);
+            font-size: 2.5rem;
+            font-weight: 400;
+            letter-spacing: -0.5px;
+        }
+
+        /* Section titles */
+        h2 {
+            font-family: var(--sans);
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--faint);
+            margin-bottom: 1rem;
+            font-weight: 500;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Weather */
+        .weather-main {
+            display: flex;
+            align-items: baseline;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+        .weather-temp {
+            font-size: 3.5rem;
+            font-weight: 300;
+            line-height: 1;
+        }
+        .weather-desc {
+            font-family: var(--sans);
+            font-size: 1rem;
+            color: var(--muted);
+        }
+        .weather-meta {
+            font-family: var(--sans);
+            font-size: 0.8rem;
+            color: var(--faint);
+            display: flex;
+            gap: 1.25rem;
+        }
+        .forecast {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1.25rem;
+            padding-top: 1.25rem;
+            border-top: 1px solid var(--border);
+        }
+        .forecast-day {
+            flex: 1;
+            text-align: center;
+            padding: 0.75rem 0.25rem;
+            border-radius: 4px;
+            background: var(--bg);
+        }
+        .forecast-day .day {
+            font-family: var(--sans);
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--faint);
+            margin-bottom: 0.25rem;
+        }
+        .forecast-day .temp {
+            font-family: var(--sans);
+            font-size: 1rem;
+            font-weight: 500;
+        }
+        .forecast-day .cond {
+            font-family: var(--sans);
+            font-size: 0.7rem;
+            color: var(--faint);
+            margin-top: 0.15rem;
+        }
+
+        /* Schedule */
+        .event {
+            display: flex;
+            gap: 1rem;
+            padding: 0.6rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .event:last-child { border-bottom: none; }
+        .event-time {
+            font-family: var(--sans);
+            font-size: 0.85rem;
+            color: var(--accent);
+            font-weight: 500;
+            min-width: 3.5rem;
+            text-align: right;
+        }
+        .event-title {
+            font-size: 1.05rem;
+        }
+        .event-detail {
+            font-family: var(--sans);
+            font-size: 0.8rem;
+            color: var(--faint);
+            margin-top: 0.1rem;
+        }
+        .event.done {
+            opacity: 0.4;
+        }
+        .event.done .event-title {
+            text-decoration: line-through;
+        }
+
+        /* Tomorrow preview */
+        .tomorrow {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+        .tomorrow h3 {
+            font-family: var(--sans);
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--faint);
+            margin-bottom: 0.75rem;
+        }
+        .tomorrow-event {
+            display: flex;
+            gap: 0.75rem;
+            align-items: baseline;
+            font-size: 0.95rem;
+            color: var(--muted);
+            padding: 0.3rem 0;
+        }
+        .tomorrow-event .time {
+            font-family: var(--sans);
+            font-size: 0.8rem;
+            min-width: 3.5rem;
+            text-align: right;
+        }
+
+        /* Heads Up */
+        .heads-up {
+            background: #fdf8f0;
+            border-color: #e8dcc8;
+        }
+        .heads-up-item {
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-start;
+            padding: 0.5rem 0;
+            font-size: 0.95rem;
+        }
+        .heads-up-item .icon {
+            font-size: 1.1rem;
+            line-height: 1.4;
+        }
+        .heads-up-item p {
+            color: var(--muted);
+        }
+
+        /* News */
+        .news-tabs {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.5rem;
+        }
+        .tab {
+            font-family: var(--sans);
+            font-size: 0.8rem;
+            color: var(--faint);
+            cursor: pointer;
+            padding-bottom: 0.4rem;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        .tab:hover { color: var(--muted); }
+        .tab.active {
+            color: var(--text);
+            border-bottom-color: var(--text);
+        }
+        .story {
+            padding: 1.25rem 0;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .story:hover { background: rgba(255,255,255,0.5); }
+        .story:last-child { border-bottom: none; }
+        .story-source {
+            font-family: var(--sans);
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--faint);
+            margin-bottom: 0.4rem;
+        }
+        .story-headline {
+            font-size: 1.15rem;
+            font-weight: 600;
+            line-height: 1.35;
+            margin-bottom: 0.4rem;
+            transition: color 0.2s;
+        }
+        .story:hover .story-headline { color: var(--accent); }
+        .story-lede {
+            font-size: 0.95rem;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        .hidden-section { display: none; }
+        .hidden-section.active { display: block; }
+
+        /* Reddit humor */
+        .reddit-item {
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .reddit-item:last-child { border-bottom: none; }
+        .reddit-source {
+            font-family: var(--sans);
+            font-size: 0.7rem;
+            color: var(--faint);
+            margin-bottom: 0.3rem;
+        }
+        .reddit-source a {
+            color: #c2410c;
+            text-decoration: none;
+        }
+        .reddit-title {
+            font-size: 1rem;
+            font-style: italic;
+            color: var(--text);
+        }
+        .reddit-context {
+            font-family: var(--sans);
+            font-size: 0.8rem;
+            color: var(--faint);
+            margin-top: 0.25rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+        }
+        footer p {
+            font-family: var(--sans);
+            font-size: 0.75rem;
+            color: var(--faint);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <p class="date-line">Wednesday, May 14, 2026</p>
+            <h1>Good Morning, Arles</h1>
+        </header>
+
+        <!-- Weather -->
+        <section class="card">
+            <h2>Denver</h2>
+            <div class="weather-main">
+                <span class="weather-temp">62°</span>
+                <span class="weather-desc">Mostly sunny</span>
+            </div>
+            <div class="weather-meta">
+                <span>H: 78°</span>
+                <span>L: 52°</span>
+                <span>Wind 8 mph</span>
+            </div>
+            <div class="forecast">
+                <div class="forecast-day">
+                    <div class="day">Thu</div>
+                    <div class="temp">75°</div>
+                    <div class="cond">Sunny</div>
+                </div>
+                <div class="forecast-day">
+                    <div class="day">Fri</div>
+                    <div class="temp">71°</div>
+                    <div class="cond">Partly</div>
+                </div>
+                <div class="forecast-day">
+                    <div class="day">Sat</div>
+                    <div class="temp">68°</div>
+                    <div class="cond">Cloudy</div>
+                </div>
+                <div class="forecast-day">
+                    <div class="day">Sun</div>
+                    <div class="temp">74°</div>
+                    <div class="cond">Sunny</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Schedule -->
+        <section class="card">
+            <h2>Today</h2>
+            <div class="event">
+                <span class="event-time">09:00</span>
+                <div>
+                    <div class="event-title">Standup meeting</div>
+                    <div class="event-detail">Answer Engineering · Zoom</div>
+                </div>
+            </div>
+            <div class="event">
+                <span class="event-time">12:30</span>
+                <div>
+                    <div class="event-title">Lunch with Sarah</div>
+                    <div class="event-detail">The Mercantile</div>
+                </div>
+            </div>
+            <div class="event">
+                <span class="event-time">16:00</span>
+                <div>
+                    <div class="event-title">Project review with design team</div>
+                    <div class="event-detail">Conference room B</div>
+                </div>
+            </div>
+            <div class="event done">
+                <span class="event-time">07:00</span>
+                <div>
+                    <div class="event-title">Morning run</div>
+                </div>
+            </div>
+
+            <div class="tomorrow">
+                <h3>Tomorrow</h3>
+                <div class="tomorrow-event">
+                    <span class="time">10:00</span>
+                    <span>Engineering all-hands</span>
+                </div>
+                <div class="tomorrow-event">
+                    <span class="time">14:30</span>
+                    <span>Dentist appointment · Downtown Dental</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Heads Up -->
+        <section class="card heads-up">
+            <h2>Heads Up</h2>
+            <div class="heads-up-item">
+                <span class="icon">🔥</span>
+                <p>Red Flag Warning issued for Front Range foothills this weekend. High winds and dry conditions — avoid outdoor burning.</p>
+            </div>
+        </section>
+
+        <!-- News -->
+        <section class="card">
+            <h2>In the World</h2>
+            <div class="news-tabs">
+                <span class="tab active" onclick="switchTab(event, 'world')">World</span>
+                <span class="tab" onclick="switchTab(event, 'science')">Science & Tech</span>
+                <span class="tab" onclick="switchTab(event, 'local')">Denver</span>
+            </div>
+
+            <div id="world" class="hidden-section active">
+                <div class="story">
+                    <div class="story-source">Reuters · 2 hours ago</div>
+                    <div class="story-headline">House Passes Revised Aerospace Funding Bill</div>
+                    <div class="story-lede">Bipartisan support for a $28 billion package focused on small satellite launch infrastructure and workforce training programs.</div>
+                </div>
+                <div class="story">
+                    <div class="story-source">AP News · 4 hours ago</div>
+                    <div class="story-headline">NOAA Forecasts Quieter-Than-Average Hurricane Season</div>
+                    <div class="story-lede">Forecasters predict 11 named storms, below the 14-storm average. El Niño transition cited as primary factor.</div>
+                </div>
+                <div class="story">
+                    <div class="story-source">BBC · 6 hours ago</div>
+                    <div class="story-headline">International Space Station Crew Completes Spacewalk</div>
+                    <div class="story-lede">Seven-hour EVA successfully upgrades solar array power channels ahead of expanded commercial crew rotations.</div>
+                </div>
+            </div>
+
+            <div id="science" class="hidden-section">
+                <div class="story">
+                    <div class="story-source">Nature · 3 hours ago</div>
+                    <div class="story-headline">Solid-State Battery Demonstrates 1,000 Charge Cycles</div>
+                    <div class="story-lede">MIT team shows lithium-sulfur cell retaining 80% capacity. Experts say commercial EV timeline still 5–7 years out.</div>
+                </div>
+                <div class="story">
+                    <div class="story-source">Ars Technica · 5 hours ago</div>
+                    <div class="story-headline">James Webb Maps Atmospheric Chemistry of Hycean World</div>
+                    <div class="story-lede">K2-18b data reveals carbon-bearing molecules in a hydrogen-rich ocean — a new class of potentially habitable planets.</div>
+                </div>
+            </div>
+
+            <div id="local" class="hidden-section">
+                <div class="story">
+                    <div class="story-source">Denver Post · 1 hour ago</div>
+                    <div class="story-headline">City Council Approves 12-Mile Bike Lane Expansion</div>
+                    <div class="story-lede">RiNo to Capitol Hill connection by 2027. Some Colfax business owners raise parking concerns.</div>
+                </div>
+                <div class="story">
+                    <div class="story-source">9News · 3 hours ago</div>
+                    <div class="story-headline">RTD Adds Express Bus Route to DIA from Boulder</div>
+                    <div class="story-lede">New AB7 route cuts transit time by 20 minutes with limited stops. Starts June 1.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Reddit Humor -->
+        <section class="card">
+            <h2>One Good Laugh</h2>
+            <div class="reddit-item">
+                <div class="reddit-source"><a href="#">r/space</a></div>
+                <div class="reddit-title">"I worked on the Starship docking system. Here's what went wrong in the first three attempts."</div>
+                <div class="reddit-context">Engineer's threaded breakdown of sensor alignment and valve timing. Surprisingly wholesome comments.</div>
+            </div>
+            <div class="reddit-item">
+                <div class="reddit-source"><a href="#">r/ProgrammerHumor</a></div>
+                <div class="reddit-title">"My home server has been running for 187 days. I'm too scared to update it."</div>
+                <div class="reddit-context">2.4k upvotes · 340 comments of people sharing their uptime superstitions.</div>
+            </div>
+        </section>
+
+        <footer>
+            <p>Updated at 6:00 AM · No algorithms. No clickbait. Just what matters.</p>
+        </footer>
+    </div>
+
+    <script>
+        function switchTab(event, tabId) {
+            document.querySelectorAll('.hidden-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
+        }
+    </script>
+</body>
+</html>
