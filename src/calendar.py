@@ -10,16 +10,15 @@ from src.config import DATA_DIR, TIMEZONE
 
 
 def normalize_dt(dt) -> datetime:
-    """Convert an icalendar date/datetime to a timezone-aware datetime."""
+    """Convert an icalendar date/datetime to a timezone-aware datetime in local time."""
     if isinstance(dt, date) and not isinstance(dt, datetime):
-        return datetime(dt.year, dt.month, dt.day, tzinfo=timezone.utc)
+        return datetime(dt.year, dt.month, dt.day, tzinfo=TIMEZONE)
     if dt is None:
-        return datetime.min.replace(tzinfo=timezone.utc)
-    # If naive, assume UTC
+        return datetime.min.replace(tzinfo=TIMEZONE)
     if dt.tzinfo is None:
-        return dt.replace(tzinfo=timezone.utc)
-    # Convert to UTC
-    return dt.astimezone(timezone.utc)
+        return dt.replace(tzinfo=TIMEZONE)
+    # Convert to local timezone
+    return dt.astimezone(TIMEZONE)
 
 
 def is_today(dt: datetime, now: datetime) -> bool:
@@ -108,7 +107,7 @@ def extract_events(ical_text: str, target_date: date) -> list[dict]:
                 })
     
     # Sort: all-day events first, then timed events by start time
-    events.sort(key=lambda e: (0 if e["all_day"] else 1, e["start"] or datetime.min.replace(tzinfo=timezone.utc)))
+    events.sort(key=lambda e: (0 if e["all_day"] else 1, e["start"] or datetime.min.replace(tzinfo=TIMEZONE)))
     return events
 
 

@@ -124,8 +124,8 @@
             padding-top: 1.25rem;
             border-top: 1px solid #e8e4dc;
         }
-        .lookahead-title {
-            color: #bbb;
+        .event-time.empty-label {
+            visibility: hidden;
         }
 
         /* News tabs */
@@ -237,11 +237,17 @@
             {% if events_lookahead %}
             <div class="lookahead">
                 <p class="section-title lookahead-title">Coming Up</p>
-                {% for event in events_lookahead %}
+                {% for day, day_events in events_lookahead|groupby('day') %}
+                {% for event in day_events %}
                 <div class="event">
-                    <span class="event-time">{{ event.day }}</span>
+                    {% if loop.first %}
+                    <span class="event-time">{{ day }}</span>
+                    {% else %}
+                    <span class="event-time empty-label">—</span>
+                    {% endif %}
                     <span class="event-title">{{ event.summary }}</span>
                 </div>
+                {% endfor %}
                 {% endfor %}
             </div>
             {% endif %}
