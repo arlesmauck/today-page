@@ -32,3 +32,15 @@ REFRESH_INTERVAL = int(os.getenv("REFRESH_INTERVAL", "3600"))  # 1 hour
 from zoneinfo import ZoneInfo
 TIMEZONE_NAME = os.getenv("TIMEZONE", "America/Denver")
 TIMEZONE = ZoneInfo(TIMEZONE_NAME)
+
+# AI news summarization (optional)
+# AI_MODEL accepts any litellm model string:
+#   Anthropic:  claude-haiku-4-5-20251001, claude-sonnet-4-6
+#   OpenAI:     gpt-4o-mini, gpt-4o
+#   Ollama:     ollama/llama3.2, ollama/mistral  (set AI_API_BASE for remote hosts)
+#   Gemini:     gemini/gemini-1.5-flash
+#   Groq:       groq/llama-3.1-8b-instant
+AI_MODEL = os.getenv("AI_MODEL", "claude-haiku-4-5-20251001")
+AI_API_KEY = os.getenv("AI_API_KEY", "")
+AI_API_BASE = os.getenv("AI_API_BASE", "")  # optional; required for remote Ollama
+AI_SUMMARY_ENABLED = bool(AI_API_KEY) or AI_MODEL.startswith("ollama/")

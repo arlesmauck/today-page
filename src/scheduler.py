@@ -2,10 +2,10 @@
 import asyncio
 import logging
 
-from src.config import REFRESH_INTERVAL
+from src.config import REFRESH_INTERVAL, AI_SUMMARY_ENABLED, AI_MODEL
 from src.fetcher import refresh_weather
 from src.calendar import refresh_calendar
-from src.news import refresh_news
+from src.news import refresh_news, load_news
 from src.builder import write_page
 
 logging.basicConfig(
@@ -18,6 +18,8 @@ logger = logging.getLogger("scheduler")
 async def run_scheduler():
     """Run the refresh loop forever."""
     logger.info("Starting scheduler with %d-second interval", REFRESH_INTERVAL)
+    if AI_SUMMARY_ENABLED:
+        logger.info("AI news summarization enabled (model: %s)", AI_MODEL)
 
     # Do an initial fetch immediately
     try:
@@ -37,6 +39,14 @@ async def run_scheduler():
         logger.info("Initial news fetch complete")
     except Exception as e:
         logger.error("Initial news fetch failed: %s", e)
+
+    if AI_SUMMARY_ENABLED:
+        try:
+            from src.ai_summarizer import enrich_stories_with_ai
+            await enrich_stories_with_ai(load_news())
+            logger.info("Initial AI news enrichment complete")
+        except Exception as e:
+            logger.error("Initial AI news enrichment failed: %s", e)
 
     try:
         write_page()
@@ -63,6 +73,14 @@ async def run_scheduler():
             logger.info("News refresh complete")
         except Exception as e:
             logger.error("News refresh failed: %s", e)
+
+        if AI_SUMMARY_ENABLED:
+            try:
+                from src.ai_summarizer import enrich_stories_with_ai
+                await enrich_stories_with_ai(load_news())
+                logger.info("AI news enrichment complete")
+            except Exception as e:
+                logger.error("AI news enrichment failed: %s", e)
 
         try:
             write_page()

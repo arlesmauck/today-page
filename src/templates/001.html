@@ -183,6 +183,36 @@
             color: #666;
             line-height: 1.6;
         }
+        .expand-btn {
+            background: none;
+            border: none;
+            font-family: inherit;
+            font-size: 0.8rem;
+            color: #a09080;
+            cursor: pointer;
+            padding: 0;
+            margin-top: 0.5rem;
+            text-decoration: underline;
+            text-decoration-style: dotted;
+            text-underline-offset: 2px;
+        }
+        .expand-btn:hover { color: #8b7355; }
+        .story-detail {
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid #e8e4dc;
+            font-size: 0.95rem;
+            line-height: 1.65;
+            color: #444;
+        }
+        .story-link {
+            display: inline-block;
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            color: #a09080;
+            text-decoration: none;
+        }
+        .story-link:hover { color: #8b7355; text-decoration: underline; }
 
         /* Footer */
         footer {
@@ -283,16 +313,23 @@
             {% for story in news %}
             <div class="story-card" data-category="{{ story.category }}">
                 <p class="story-source">{{ story.source }}</p>
-                {% if story.url %}
-                <a class="story-headline" href="{{ story.url }}" target="_blank" rel="noopener">{{ story.headline }}</a>
-                {% else %}
-                <span class="story-headline">{{ story.headline }}</span>
+                <p class="story-headline">{{ story.headline }}</p>
+                <p class="story-lede">{{ story.summary_brief if story.summary_brief else story.lede }}</p>
+                {% if story.summary_detail %}
+                <button class="expand-btn" onclick="toggleDetail(this)">More detail</button>
+                <div class="story-detail" hidden>
+                    <p>{{ story.summary_detail }}</p>
+                    {% if story.accessible and story.url %}
+                    <a class="story-link" href="{{ story.url }}" target="_blank" rel="noopener">Read original ↗</a>
+                    {% endif %}
+                </div>
+                {% elif story.accessible and story.url %}
+                <a class="story-link" href="{{ story.url }}" target="_blank" rel="noopener">Read more ↗</a>
                 {% endif %}
-                <p class="story-lede">{{ story.lede }}</p>
             </div>
             {% endfor %}
             {% else %}
-            <p class="empty-msg" style="padding:1rem 0;">No news available. Configure RSS feeds via NEWS_FEED_WORLD_URL etc.</p>
+            <p class="empty-msg" style="padding:1rem 0;">No news available.</p>
             {% endif %}
         </section>
 
@@ -318,6 +355,14 @@
         if (tabs.length > 0) {
             tabs.forEach(tab => tab.addEventListener('click', () => showTab(tab)));
             showTab(tabs[0]);
+        }
+
+        // Expand/collapse detailed AI summary
+        function toggleDetail(btn) {
+            const detail = btn.nextElementSibling;
+            const isHidden = detail.hidden;
+            detail.hidden = !isHidden;
+            btn.textContent = isHidden ? 'Less' : 'More detail';
         }
 
         // Auto-reload the page after each refresh interval so data stays fresh
