@@ -12,10 +12,14 @@ ENV_PATH = BASE_DIR / ".env"
 if ENV_PATH.exists():
     load_dotenv(ENV_PATH)
 
-# NWS Configuration
+# Location
 LATITUDE = float(os.getenv("LATITUDE", "39.7392"))
 LONGITUDE = float(os.getenv("LONGITUDE", "-104.9903"))
 LOCATION_NAME = os.getenv("LOCATION_NAME", "Denver, CO")
+
+# Personalization
+USER_NAME = os.getenv("USER_NAME", "Friend")
+PAGE_TITLE = os.getenv("PAGE_TITLE", "Your Morning Paper")
 
 # Server
 HOST = os.getenv("HOST", "0.0.0.0")
@@ -26,4 +30,5 @@ REFRESH_INTERVAL = int(os.getenv("REFRESH_INTERVAL", "3600"))  # 1 hour
 
 # Timezone for date display / "today" determinations
 from zoneinfo import ZoneInfo
-TIMEZONE = ZoneInfo(os.getenv("TIMEZONE", "America/Denver"))
+TIMEZONE_NAME = os.getenv("TIMEZONE", "America/Denver")
+TIMEZONE = ZoneInfo(TIMEZONE_NAME)

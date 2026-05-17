@@ -7,6 +7,8 @@ from fastapi.staticfiles import StaticFiles
 
 from src.config import BASE_DIR, DATA_DIR
 from src.fetcher import load_weather, refresh_weather
+from src.calendar import load_calendar
+from src.news import load_news
 
 app = FastAPI(title="Today Page", version="1.0.0")
 
@@ -22,7 +24,7 @@ async def root():
     index_file = static_dir / "index.html"
     if index_file.exists():
         return FileResponse(index_file)
-    return {"message": "Today Page is running", "status": "ok"}
+    return {"message": "Today Page is running. Data is being fetched on first start.", "status": "starting"}
 
 
 @app.get("/api/weather")
@@ -38,7 +40,7 @@ async def get_weather():
 
 
 @app.post("/api/weather/refresh")
-async def trigger_refresh():
+async def trigger_weather_refresh():
     """Manually trigger a weather refresh."""
     try:
         data = await refresh_weather()
@@ -48,6 +50,24 @@ async def trigger_refresh():
             status_code=500,
             content={"error": str(e)}
         )
+
+
+@app.get("/api/calendar")
+async def get_calendar():
+    """Return cached calendar data."""
+    data = load_calendar()
+    if data is None:
+        return JSONResponse(
+            status_code=503,
+            content={"error": "Calendar data not available yet. Refresh in progress."}
+        )
+    return data
+
+
+@app.get("/api/news")
+async def get_news():
+    """Return cached news stories."""
+    return load_news()
 
 
 @app.get("/api/health")

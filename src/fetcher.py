@@ -1,144 +1,117 @@
-"""Fetch and cache weather data from the National Weather Service."""
+"""Fetch and cache weather data from Open-Meteo (free, global, no API key)."""
 import json
-import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
 
-from src.config import DATA_DIR, LATITUDE, LONGITUDE, LOCATION_NAME
+from src.config import DATA_DIR, LATITUDE, LONGITUDE, LOCATION_NAME, TIMEZONE_NAME
 
 
 WEATHER_FILE = DATA_DIR / "weather.json"
-NWS_BASE = "https://api.weather.gov"
-USER_AGENT = "today-page/1.0 (personal dashboard)"
+OPEN_METEO_BASE = "https://api.open-meteo.com/v1/forecast"
 
-HEADERS = {
-    "User-Agent": USER_AGENT,
-    "Accept": "application/geo+json",
+# WMO Weather interpretation codes → human-readable description
+WMO_DESCRIPTIONS = {
+    0: "Clear sky",
+    1: "Mainly clear",
+    2: "Partly cloudy",
+    3: "Overcast",
+    45: "Foggy",
+    48: "Icy fog",
+    51: "Light drizzle",
+    53: "Moderate drizzle",
+    55: "Dense drizzle",
+    61: "Slight rain",
+    63: "Moderate rain",
+    65: "Heavy rain",
+    71: "Slight snow",
+    73: "Moderate snow",
+    75: "Heavy snow",
+    77: "Snow grains",
+    80: "Slight showers",
+    81: "Moderate showers",
+    82: "Heavy showers",
+    85: "Slight snow showers",
+    86: "Heavy snow showers",
+    95: "Thunderstorm",
+    96: "Thunderstorm with hail",
+    99: "Thunderstorm with heavy hail",
 }
 
 
-async def fetch_json(client: httpx.AsyncClient, url: str) -> dict:
-    """Fetch JSON from a URL with error handling."""
-    resp = await client.get(url, headers=HEADERS, follow_redirects=True)
-    resp.raise_for_status()
-    return resp.json()
+def _wmo_desc(code: int | None) -> str:
+    if code is None:
+        return "Unknown"
+    return WMO_DESCRIPTIONS.get(int(code), f"Weather code {code}")
 
 
 async def fetch_weather() -> dict:
-    """Fetch current conditions and forecast from NWS."""
+    """Fetch current conditions and forecast from Open-Meteo."""
+    params = {
+        "latitude": LATITUDE,
+        "longitude": LONGITUDE,
+        "current": "temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code",
+        "hourly": "temperature_2m,precipitation_probability,weather_code",
+        "daily": "temperature_2m_max,weather_code",
+        "wind_speed_unit": "mph",
+        "temperature_unit": "fahrenheit",
+        "timezone": TIMEZONE_NAME,
+        "forecast_days": 7,
+    }
+
     async with httpx.AsyncClient(timeout=30.0) as client:
-        # Step 1: Get gridpoint info for our lat/lon
-        points_url = f"{NWS_BASE}/points/{LATITUDE},{LONGITUDE}"
-        points_data = await fetch_json(client, points_url)
-        
-        props = points_data.get("properties", {})
-        grid_id = props.get("gridId")
-        grid_x = props.get("gridX")
-        grid_y = props.get("gridY")
-        
-        if not all([grid_id, grid_x, grid_y]):
-            raise ValueError(f"Could not resolve gridpoint for {LATITUDE},{LONGITUDE}")
-        
-        # Step 2: Get current conditions from nearest station
-        stations_url = props.get("observationStations")
-        current = {}
-        if stations_url:
-            stations_data = await fetch_json(client, stations_url)
-            stations = stations_data.get("features", [])
-            if stations:
-                station_id = stations[0]["properties"]["stationIdentifier"]
-                obs_url = f"{NWS_BASE}/stations/{station_id}/observations/latest"
-                try:
-                    obs_data = await fetch_json(client, obs_url)
-                    obs_props = obs_data.get("properties", {})
-                    current = {
-                        "temperature_c": obs_props.get("temperature", {}).get("value"),
-                        "temperature_f": _c_to_f(obs_props.get("temperature", {}).get("value")),
-                        "humidity": _safe_percent(obs_props.get("relativeHumidity", {}).get("value")),
-                        "wind_speed_mph": _safe_mph(obs_props.get("windSpeed", {}).get("value")),
-                        "wind_direction": obs_props.get("windDirection", {}).get("value"),
-                        "description": obs_props.get("textDescription", ""),
-                        "station_id": station_id,
-                    }
-                except Exception:
-                    pass  # Fall back to forecast if current obs fails
-        
-        # Step 3: Get forecast
-        forecast_url = f"{NWS_BASE}/gridpoints/{grid_id}/{grid_x},{grid_y}/forecast"
-        forecast_data = await fetch_json(client, forecast_url)
-        forecast_props = forecast_data.get("properties", {})
-        periods = forecast_props.get("periods", [])
-        
-        # Step 4: Get hourly forecast
-        hourly_url = f"{NWS_BASE}/gridpoints/{grid_id}/{grid_x},{grid_y}/forecast/hourly"
-        hourly_data = await fetch_json(client, hourly_url)
-        hourly_props = hourly_data.get("properties", {})
-        hourly_periods = hourly_props.get("periods", [])
-        
-        # Build forecast list
-        daily_forecast = []
-        for p in periods[:7]:
-            daily_forecast.append({
-                "name": p.get("name", ""),
-                "temp_f": p.get("temperature"),
-                "short_desc": p.get("shortForecast", ""),
-                "detailed": p.get("detailedForecast", ""),
-                "is_daytime": p.get("isDaytime", True),
-            })
-        
-        hourly_forecast = []
-        for p in hourly_periods[:24]:
-            hourly_forecast.append({
-                "time": p.get("startTime", ""),
-                "temp_f": p.get("temperature"),
-                "short_desc": p.get("shortForecast", ""),
-                "precip_chance": p.get("probabilityOfPrecipitation", {}).get("value"),
-            })
-        
-        # If we couldn't get current conditions, use the first hourly period
-        if not current and hourly_periods:
-            p = hourly_periods[0]
-            current = {
-                "temperature_f": p.get("temperature"),
-                "description": p.get("shortForecast", ""),
-                "humidity": None,
-                "wind_speed_mph": None,
-                "wind_direction": None,
-                "station_id": None,
-            }
-        
-        result = {
-            "location": LOCATION_NAME,
-            "lat": LATITUDE,
-            "lon": LONGITUDE,
-            "fetched_at": datetime.now(timezone.utc).isoformat(),
-            "current": current,
-            "daily": daily_forecast,
-            "hourly": hourly_forecast,
-        }
-        
-        return result
+        resp = await client.get(OPEN_METEO_BASE, params=params)
+        resp.raise_for_status()
+        data = resp.json()
 
+    current = data.get("current", {})
+    hourly = data.get("hourly", {})
+    daily = data.get("daily", {})
 
-def _c_to_f(c: float | None) -> float | None:
-    if c is None:
-        return None
-    return round(c * 9 / 5 + 32, 1)
+    current_out = {
+        "temperature_f": current.get("temperature_2m"),
+        "humidity": current.get("relative_humidity_2m"),
+        "wind_speed_mph": current.get("wind_speed_10m"),
+        "description": _wmo_desc(current.get("weather_code")),
+    }
 
+    # Daily forecast (7 days)
+    daily_times = daily.get("time", [])
+    daily_max = daily.get("temperature_2m_max", [])
+    daily_codes = daily.get("weather_code", [])
+    daily_forecast = []
+    for i, t in enumerate(daily_times):
+        daily_forecast.append({
+            "date": t,
+            "temp_f": daily_max[i] if i < len(daily_max) else None,
+            "short_desc": _wmo_desc(daily_codes[i] if i < len(daily_codes) else None),
+            "is_daytime": True,
+        })
 
-def _safe_percent(val: float | None) -> int | None:
-    if val is None:
-        return None
-    return int(round(val))
+    # Hourly forecast (next 24 hours)
+    hourly_times = hourly.get("time", [])
+    hourly_temps = hourly.get("temperature_2m", [])
+    hourly_precip = hourly.get("precipitation_probability", [])
+    hourly_codes = hourly.get("weather_code", [])
+    hourly_forecast = []
+    for i in range(min(24, len(hourly_times))):
+        hourly_forecast.append({
+            "time": hourly_times[i],
+            "temp_f": hourly_temps[i] if i < len(hourly_temps) else None,
+            "short_desc": _wmo_desc(hourly_codes[i] if i < len(hourly_codes) else None),
+            "precip_chance": hourly_precip[i] if i < len(hourly_precip) else None,
+        })
 
-
-def _safe_mph(val: float | None) -> float | None:
-    if val is None:
-        return None
-    # NWS windSpeed is in km/h by default in observations
-    return round(val * 0.621371, 1)
+    return {
+        "location": LOCATION_NAME,
+        "lat": LATITUDE,
+        "lon": LONGITUDE,
+        "fetched_at": datetime.now(timezone.utc).isoformat(),
+        "current": current_out,
+        "daily": daily_forecast,
+        "hourly": hourly_forecast,
+    }
 
 
 async def refresh_weather() -> dict:

@@ -1,8 +1,6 @@
 """Fetch and parse calendar events from iCal (.ics) feeds."""
 import asyncio
 from datetime import date, datetime, timedelta, timezone
-from pathlib import Path
-
 import httpx
 from icalendar import Calendar
 from dateutil.rrule import rrule, WEEKLY, DAILY, MONTHLY, YEARLY
@@ -337,21 +335,16 @@ async def fetch_calendar(url: str) -> str:
 
 
 def load_calendar_urls() -> list[str]:
-    """Load calendar URLs from .env file."""
-    env_path = Path(__file__).parent.parent / ".env"
-    urls = []
-    if env_path.exists():
-        with open(env_path) as f:
-            for line in f:
-                line = line.strip()
-                if line.startswith("#") or not line:
-                    continue
-                if "_CALENDAR_URL=" in line:
-                    _, val = line.split("=", 1)
-                    val = val.strip().strip('"\'')
-                    if val and not val.startswith("TODO"):
-                        urls.append(val)
-    return urls
+    """Load calendar URLs from environment variables.
+
+    Any env var ending in _CALENDAR_URL (e.g. PERSONAL_CALENDAR_URL,
+    WORK_CALENDAR_URL) will be included.
+    """
+    import os
+    return [
+        v for k, v in os.environ.items()
+        if k.endswith("_CALENDAR_URL") and v and not v.startswith("TODO")
+    ]
 
 
 async def fetch_all_calendars() -> dict:

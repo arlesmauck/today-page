@@ -5,10 +5,15 @@ services:
     restart: unless-stopped
     ports:
       - "8787:8080"
+    env_file:
+      - .env
     environment:
       LATITUDE: "39.7392"
       LONGITUDE: "-104.9903"
       LOCATION_NAME: "Denver, CO"
+      TIMEZONE: "America/Denver"
+      USER_NAME: "Arles"
+      PAGE_TITLE: "Your Morning Paper"
       REFRESH_INTERVAL: "900"
       DATA_DIR: "/app/data"
     volumes:

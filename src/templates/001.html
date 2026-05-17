@@ -143,6 +143,7 @@
             cursor: pointer;
             padding-bottom: 0.5rem;
             border-bottom: 2px solid transparent;
+            user-select: none;
         }
         .tab.active {
             color: #2d2d2d;
@@ -173,6 +174,8 @@
             color: #2d2d2d;
             cursor: pointer;
             transition: color 0.2s;
+            text-decoration: none;
+            display: block;
         }
         .story-headline:hover { color: #8b7355; }
         .story-lede {
@@ -216,8 +219,9 @@
                 <span class="weather-desc">{{ weather.description }}</span>
             </div>
             <div class="weather-meta sans">
-                <span>H: {{ weather.temp_high or '--' }}°</span>
+                {% if weather.temp_high is not none %}<span>H: {{ weather.temp_high }}°</span>{% endif %}
                 <span>Wind {{ weather.wind_speed_mph|round|int }} mph</span>
+                <span>Humidity {{ weather.humidity }}%</span>
             </div>
         </section>
 
@@ -236,7 +240,7 @@
 
             {% if events_tomorrow %}
             <div class="tomorrow">
-                <p class="section-title lookahead-title">Tomorrow</p>
+                <p class="section-title lookahead-title" style="margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid #e8e4dc;">Tomorrow</p>
                 {% for event in events_tomorrow %}
                 <div class="event">
                     <span class="event-time">{{ event.time }}</span>
@@ -267,18 +271,29 @@
 
         <!-- News -->
         <section>
+            {% if news_categories %}
             <div class="tabs">
-                <span class="tab active">World</span>
-                <span class="tab">Science & Tech</span>
-                <span class="tab">Denver</span>
+                {% for cat in news_categories %}
+                <span class="tab {% if loop.first %}active{% endif %}" data-cat="{{ cat }}">{{ cat }}</span>
+                {% endfor %}
             </div>
+            {% endif %}
+
+            {% if news %}
             {% for story in news %}
-            <div class="story-card">
-                <p class="story-source">{{ story.source }} · {{ story.when }}</p>
-                <h2 class="story-headline">{{ story.headline }}</h2>
+            <div class="story-card" data-category="{{ story.category }}">
+                <p class="story-source">{{ story.source }}</p>
+                {% if story.url %}
+                <a class="story-headline" href="{{ story.url }}" target="_blank" rel="noopener">{{ story.headline }}</a>
+                {% else %}
+                <span class="story-headline">{{ story.headline }}</span>
+                {% endif %}
                 <p class="story-lede">{{ story.lede }}</p>
             </div>
             {% endfor %}
+            {% else %}
+            <p class="empty-msg" style="padding:1rem 0;">No news available. Configure RSS feeds via NEWS_FEED_WORLD_URL etc.</p>
+            {% endif %}
         </section>
 
         <footer>
@@ -286,5 +301,27 @@
             <p class="tagline">"No algorithms. No clickbait. Just what matters."</p>
         </footer>
     </div>
+
+    <script>
+        // Tab switching for news
+        const tabs = document.querySelectorAll('.tab');
+        const stories = document.querySelectorAll('.story-card');
+
+        function showTab(activeTab) {
+            const cat = activeTab.dataset.cat;
+            tabs.forEach(t => t.classList.toggle('active', t === activeTab));
+            stories.forEach(s => {
+                s.style.display = s.dataset.category === cat ? '' : 'none';
+            });
+        }
+
+        if (tabs.length > 0) {
+            tabs.forEach(tab => tab.addEventListener('click', () => showTab(tab)));
+            showTab(tabs[0]);
+        }
+
+        // Auto-reload the page after each refresh interval so data stays fresh
+        setTimeout(() => location.reload(), {{ refresh_interval_ms }});
+    </script>
 </body>
 </html>

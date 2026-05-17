@@ -5,13 +5,14 @@ from pathlib import Path
 
 import jinja2
 
-from src.config import BASE_DIR, DATA_DIR, LOCATION_NAME, TIMEZONE
+from src.config import BASE_DIR, DATA_DIR, LOCATION_NAME, TIMEZONE, REFRESH_INTERVAL, USER_NAME, PAGE_TITLE
 from src.fetcher import load_weather
 from src.calendar import load_calendar
+from src.news import load_news, news_categories
 
 
 TEMPLATE_DIR = BASE_DIR / "src" / "templates"
-OUTPUT_FILE = BASE_DIR / "index.html"
+OUTPUT_FILE = BASE_DIR / "src" / "static" / "index.html"
 
 
 def format_time(dt_str: str) -> str:
@@ -27,11 +28,14 @@ def format_time(dt_str: str) -> str:
 def build_page() -> str:
     """Fetch data and render the HTML page."""
     now = datetime.now(TIMEZONE)
-    
+
     # Load weather
     weather = load_weather()
     current = weather.get("current", {}) if weather else {}
-    
+    daily = weather.get("daily", []) if weather else []
+    temp_high = daily[0].get("temp_f") if daily else None
+
+    # Load calendar
     cal = load_calendar()
     events_today = []
     events_tomorrow = []
@@ -51,10 +55,9 @@ def build_page() -> str:
                 "location": ev.get("location", ""),
             })
 
-        # Group lookahead events by day in Python (preserves chronological order by date)
         def _key(ev):
             return ev.get("_look_day", ""), ev.get("_look_day_name", "")
-        
+
         grouped = []
         all_lookahead = cal.get("lookahead", [])
         sorted_events = sorted(all_lookahead, key=lambda e: (e.get("_look_day", ""), 0 if e.get("all_day") else 1, str(e.get("start", ""))))
@@ -70,11 +73,9 @@ def build_page() -> str:
                     for ev in evs
                 ]
             })
-        
-        # Limit to first 8 event instances (not days) for brevity
-        total = 0
-        for g in grouped:
-            total += len(g["events"])
+
+        # Limit to first 8 event instances for brevity
+        total = sum(len(g["events"]) for g in grouped)
         if total > 8:
             trimmed = []
             count = 0
@@ -86,38 +87,26 @@ def build_page() -> str:
                 trimmed.append(g)
                 count += len(g["events"])
             grouped = trimmed
-        
+
         events_lookahead = grouped
-    
-    # Static news for now (placeholder)
-    news = [
-        {
-            "source": "Reuters",
-            "when": "2 hours ago",
-            "headline": "House Passes Revised Aerospace Funding Bill",
-            "lede": "Bipartisan support for a $28 billion package focused on small satellite launch infrastructure.",
-        },
-        {
-            "source": "AP News",
-            "when": "4 hours ago",
-            "headline": "NOAA Forecasts Quieter-Than-Average Hurricane Season",
-            "lede": "Forecasters predict 11 named storms, below the 14-storm average.",
-        },
-    ]
-    
+
+    # Load news
+    news = load_news()
+    categories = news_categories()
+
     # Render template
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(TEMPLATE_DIR))
     template = env.get_template("001.html")
-    
+
     html = template.render(
-        title="Your Morning Paper",
+        title=PAGE_TITLE,
         date_str=now.strftime("%A, %B %d, %Y"),
-        greeting="Good Morning, Arles",
+        greeting=f"Good Morning, {USER_NAME}",
         location=LOCATION_NAME,
         weather={
             "temp_f": current.get("temperature_f") or 62,
             "description": current.get("description") or "Mostly sunny",
-            "temp_high": 78,
+            "temp_high": round(temp_high) if temp_high is not None else None,
             "wind_speed_mph": current.get("wind_speed_mph") or 8,
             "humidity": current.get("humidity") or 18,
         },
@@ -125,14 +114,17 @@ def build_page() -> str:
         events_tomorrow=events_tomorrow,
         events_lookahead=events_lookahead,
         news=news,
+        news_categories=categories,
         updated_at=now.astimezone().strftime("%I:%M %p").lstrip("0"),
+        refresh_interval_ms=REFRESH_INTERVAL * 1000,
     )
-    
+
     return html
 
 
 def write_page() -> None:
     """Build and write the page to disk."""
+    OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
     html = build_page()
     OUTPUT_FILE.write_text(html)
     print(f"Page written to {OUTPUT_FILE}")
