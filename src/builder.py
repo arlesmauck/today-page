@@ -16,10 +16,10 @@ OUTPUT_FILE = BASE_DIR / "src" / "static" / "index.html"
 
 
 def format_time(dt_str: str) -> str:
-    """Format an ISO datetime string as HH:MM AM/PM."""
+    """Format an ISO datetime string as HH:MM AM/PM in the configured timezone."""
     try:
         dt = datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
-        local = dt.astimezone()
+        local = dt.astimezone(TIMEZONE)
         return local.strftime("%I:%M %p").lstrip("0")
     except Exception:
         return ""

@@ -9,4 +9,5 @@ data/
 .gitignore
 .github/
 README.md
+COMMANDS.md
 sketches/
