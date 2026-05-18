@@ -326,6 +326,12 @@
                 {% elif story.accessible and story.url %}
                 <a class="story-link" href="{{ story.url }}" target="_blank" rel="noopener">Read more ↗</a>
                 {% endif %}
+                {% if story.summary_context %}
+                <button class="expand-btn" onclick="toggleDetail(this)">Background</button>
+                <div class="story-detail" hidden>
+                    <p>{{ story.summary_context }}</p>
+                </div>
+                {% endif %}
             </div>
             {% endfor %}
             {% else %}

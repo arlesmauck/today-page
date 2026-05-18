@@ -7,8 +7,9 @@ from datetime import datetime, timezone
 
 import feedparser
 import httpx
+from urllib.parse import quote
 
-from src.config import DATA_DIR
+from src.config import DATA_DIR, LOCATION_NAME
 
 logger = logging.getLogger("news")
 
@@ -54,6 +55,11 @@ def _load_feeds() -> list[tuple[str, str]]:
         if key.startswith("NEWS_FEED_") and key.endswith("_URL") and key not in known_env_vars and val:
             label = key.removeprefix("NEWS_FEED_").removesuffix("_URL").replace("_", " ").title()
             feeds[label] = val
+    # Auto-add Local tab from Google News search if not already configured
+    if "Local" not in feeds and LOCATION_NAME:
+        encoded = quote(LOCATION_NAME)
+        feeds["Local"] = f"https://news.google.com/rss/search?q={encoded}&hl=en-US&gl=US&ceid=US:en"
+        logger.debug("Auto-added Local feed for %r via Google News search", LOCATION_NAME)
     return list(feeds.items())
 
 

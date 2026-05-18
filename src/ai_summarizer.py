@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 
 import httpx
 
-from src.config import AI_MODEL, AI_API_KEY, AI_API_BASE, AI_SUMMARY_ENABLED, DATA_DIR
+from src.config import AI_MODEL, AI_API_KEY, AI_API_BASE, AI_SUMMARY_ENABLED, CONTEXT_MODEL, CONTEXT_ENABLED, DATA_DIR
 from src.news import NEWS_FILE
 
 
@@ -129,6 +129,41 @@ async def _call_llm(headline: str, article_text: str) -> tuple[str, str] | None:
         return None
 
 
+async def _call_context_llm(headline: str) -> str | None:
+    """Call CONTEXT_MODEL (e.g. Perplexity sonar) for web-searched background on a headline."""
+    import litellm
+
+    kwargs: dict = {
+        "model": CONTEXT_MODEL,
+        "max_tokens": 256,
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    "You are a reference editor. Write one paragraph of essential background "
+                    "for a reader encountering this news story. Cover: who the key players are, "
+                    "relevant history, and why this topic matters. Use only well-established, "
+                    "verifiable facts. Be neutral and concise."
+                ),
+            },
+            {"role": "user", "content": f"News headline: {headline}"},
+        ],
+    }
+    if AI_API_KEY:
+        kwargs["api_key"] = AI_API_KEY
+    if AI_API_BASE:
+        kwargs["api_base"] = AI_API_BASE
+
+    try:
+        response = await litellm.acompletion(**kwargs)
+        text = response.choices[0].message.content.strip()
+        logger.debug("Context LLM responded for %r", headline[:60])
+        return text
+    except Exception as e:
+        logger.warning("Context LLM call failed for %r: %s", headline[:60], e)
+        return None
+
+
 async def _summarize_one(
     http_client: httpx.AsyncClient,
     story: dict,
@@ -142,13 +177,16 @@ async def _summarize_one(
     if url and url in cache:
         logger.debug("Cache hit: %r", headline[:60])
         entry = cache[url]
-        return {
+        enriched = {
             **story,
             "summary_brief": entry["summary_brief"],
             "summary_detail": entry["summary_detail"],
             "accessible": entry["accessible"],
             "ai_source": entry["ai_source"],
         }
+        if entry.get("summary_context"):
+            enriched["summary_context"] = entry["summary_context"]
+        return enriched
 
     logger.debug("Cache miss — fetching article: %r", headline[:60])
 
@@ -173,6 +211,11 @@ async def _summarize_one(
 
     brief, detail = result
 
+    # Optional: call context model for background paragraph
+    context: str | None = None
+    if CONTEXT_ENABLED:
+        context = await _call_context_llm(headline)
+
     # Update cache
     if url:
         cache[url] = {
@@ -182,10 +225,14 @@ async def _summarize_one(
             "ai_source": ai_source,
             "cached_at": datetime.now(timezone.utc).isoformat(),
         }
+        if context:
+            cache[url]["summary_context"] = context
 
     enriched = {**story, "summary_brief": brief, "accessible": accessible, "ai_source": ai_source}
     if detail:
         enriched["summary_detail"] = detail
+    if context:
+        enriched["summary_context"] = context
     return enriched
 
 
