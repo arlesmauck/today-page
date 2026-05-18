@@ -48,3 +48,6 @@ AI_SUMMARY_ENABLED = bool(AI_API_KEY) or AI_MODEL.startswith("ollama/")
 # Optional second model for per-story background context (e.g. Perplexity sonar with web search)
 CONTEXT_MODEL = os.getenv("CONTEXT_MODEL", "")
 CONTEXT_ENABLED = bool(CONTEXT_MODEL and (AI_API_KEY or CONTEXT_MODEL.startswith("ollama/")))
+# Max context LLM calls per enrichment cycle. Caps cost when many new stories arrive at once.
+# Set to 0 to disable the cap (call context for every new story).
+CONTEXT_MAX_PER_REFRESH = int(os.getenv("CONTEXT_MAX_PER_REFRESH", "10"))

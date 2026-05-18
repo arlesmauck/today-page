@@ -230,6 +230,91 @@
             margin-top: 0.5rem;
             color: #ccc;
         }
+        .settings-btn {
+            background: none;
+            border: none;
+            font-size: 1rem;
+            color: #ccc;
+            cursor: pointer;
+            margin-top: 0.75rem;
+            padding: 0;
+            line-height: 1;
+        }
+        .settings-btn:hover { color: #aaa; }
+
+        /* Settings overlay */
+        .settings-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(247,245,240,0.92);
+            z-index: 100;
+            overflow-y: auto;
+            padding: 3rem 1.5rem;
+        }
+        .settings-backdrop.open { display: block; }
+        .settings-panel {
+            max-width: 680px;
+            margin: 0 auto;
+        }
+        .settings-panel h3 {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: #aaa;
+            margin-bottom: 1.5rem;
+        }
+        .settings-field { margin-bottom: 1.5rem; }
+        .settings-field label {
+            display: block;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.75rem;
+            color: #888;
+            margin-bottom: 0.4rem;
+        }
+        .settings-field textarea {
+            width: 100%;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+            color: #2d2d2d;
+            background: #fff;
+            border: 1px solid #e0dcd4;
+            border-radius: 4px;
+            padding: 0.75rem;
+            resize: vertical;
+            line-height: 1.55;
+        }
+        .settings-field textarea:focus { outline: 1px solid #b0a898; }
+        .settings-actions {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+        .settings-actions button {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.8rem;
+            padding: 0.45rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 1px solid #d0ccc4;
+            background: #f7f5f0;
+            color: #555;
+        }
+        .settings-actions button:hover { background: #ece9e3; }
+        .settings-actions .btn-primary {
+            background: #2d2d2d;
+            color: #f7f5f0;
+            border-color: #2d2d2d;
+        }
+        .settings-actions .btn-primary:hover { background: #444; }
+        #settings-status {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.8rem;
+            margin-top: 0.75rem;
+            color: #888;
+        }
     </style>
 </head>
 <body>
@@ -314,23 +399,27 @@
             <div class="story-card" data-category="{{ story.category }}">
                 <p class="story-source">{{ story.source }}</p>
                 <p class="story-headline">{{ story.headline }}</p>
-                <p class="story-lede">{{ story.summary_brief if story.summary_brief else story.lede }}</p>
-                {% if story.summary_detail %}
-                <button class="expand-btn" onclick="toggleDetail(this)">More detail</button>
+                <p class="story-lede">{{ story.lede }}</p>
+                {% if ai_summary_enabled and story.url %}
+                <button class="expand-btn"
+                    data-url="{{ story.url }}"
+                    data-headline="{{ story.headline | e }}"
+                    data-lede="{{ story.lede | e }}"
+                    onclick="fetchSummary(this)">More detail</button>
                 <div class="story-detail" hidden>
-                    <p>{{ story.summary_detail }}</p>
-                    {% if story.accessible and story.url %}
-                    <a class="story-link" href="{{ story.url }}" target="_blank" rel="noopener">Read original ↗</a>
-                    {% endif %}
+                    <p class="detail-text"></p>
+                    <a class="story-link" href="{{ story.url }}" target="_blank" rel="noopener" hidden>Read original ↗</a>
                 </div>
-                {% elif story.accessible and story.url %}
-                <a class="story-link" href="{{ story.url }}" target="_blank" rel="noopener">Read more ↗</a>
+                {% if context_enabled %}
+                <div class="story-context" hidden>
+                    <button class="expand-btn" onclick="toggleDetail(this)">Background</button>
+                    <div class="story-detail" hidden>
+                        <p class="context-text"></p>
+                    </div>
+                </div>
                 {% endif %}
-                {% if story.summary_context %}
-                <button class="expand-btn" onclick="toggleDetail(this)">Background</button>
-                <div class="story-detail" hidden>
-                    <p>{{ story.summary_context }}</p>
-                </div>
+                {% elif story.url %}
+                <a class="story-link" href="{{ story.url }}" target="_blank" rel="noopener">Read more ↗</a>
                 {% endif %}
             </div>
             {% endfor %}
@@ -342,7 +431,33 @@
         <footer>
             <p>Updated at {{ updated_at }}</p>
             <p class="tagline">"No algorithms. No clickbait. Just what matters."</p>
+            {% if ai_summary_enabled %}
+            <button class="settings-btn" onclick="openSettings()" title="AI prompt settings">⚙</button>
+            {% endif %}
         </footer>
+    </div>
+
+    <!-- Settings overlay -->
+    <div class="settings-backdrop" id="settings-backdrop">
+        <div class="settings-panel">
+            <h3>AI Prompt Settings</h3>
+            <div class="settings-field">
+                <label>Summary prompt — used when generating Brief &amp; Detail</label>
+                <textarea id="summary-prompt" rows="12"></textarea>
+            </div>
+            {% if context_enabled %}
+            <div class="settings-field">
+                <label>Background context prompt — used when generating Background</label>
+                <textarea id="context-prompt" rows="6"></textarea>
+            </div>
+            {% endif %}
+            <div class="settings-actions">
+                <button class="btn-primary" onclick="savePrompts()">Save</button>
+                <button onclick="resetPrompts()">Reset to default</button>
+                <button onclick="closeSettings()">Cancel</button>
+            </div>
+            <p id="settings-status"></p>
+        </div>
     </div>
 
     <script>
@@ -363,13 +478,134 @@
             showTab(tabs[0]);
         }
 
-        // Expand/collapse detailed AI summary
+        // Toggle an already-populated detail div (used by Background button)
         function toggleDetail(btn) {
             const detail = btn.nextElementSibling;
             const isHidden = detail.hidden;
             detail.hidden = !isHidden;
-            btn.textContent = isHidden ? 'Less' : 'More detail';
+            btn.textContent = isHidden ? 'Less' : btn.dataset.label || btn.textContent;
         }
+
+        // Fetch AI summary on first click, then toggle like normal
+        async function fetchSummary(btn) {
+            const detailDiv = btn.nextElementSibling;
+            const detailText = detailDiv.querySelector('.detail-text');
+
+            // Already loaded — just toggle
+            if (btn.dataset.loaded) {
+                const isHidden = detailDiv.hidden;
+                detailDiv.hidden = !isHidden;
+                btn.textContent = isHidden ? 'Less' : 'More detail';
+                return;
+            }
+
+            btn.textContent = 'Loading…';
+            btn.disabled = true;
+
+            const params = new URLSearchParams({
+                url: btn.dataset.url,
+                headline: btn.dataset.headline,
+                lede: btn.dataset.lede,
+            });
+
+            try {
+                const resp = await fetch(`/api/story/summarize?${params}`);
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const data = await resp.json();
+
+                // Replace lede with AI brief
+                if (data.brief) {
+                    btn.closest('.story-card').querySelector('.story-lede').textContent = data.brief;
+                }
+
+                // Populate and show detail
+                if (data.detail) {
+                    detailText.textContent = data.detail;
+                }
+
+                // Show "Read original" link only if article was accessible
+                const link = detailDiv.querySelector('.story-link');
+                if (link) link.hidden = !data.accessible;
+
+                // Populate background context if present
+                const contextWrapper = btn.closest('.story-card').querySelector('.story-context');
+                if (contextWrapper && data.context) {
+                    contextWrapper.querySelector('.context-text').textContent = data.context;
+                    contextWrapper.hidden = false;
+                }
+
+                btn.dataset.loaded = '1';
+                detailDiv.hidden = false;
+                btn.textContent = 'Less';
+            } catch (e) {
+                btn.textContent = 'More detail';
+                btn.disabled = false;
+            }
+        }
+
+        // ── Settings panel ────────────────────────────────────────────────────
+        let _defaults = {};
+
+        async function openSettings() {
+            const status = document.getElementById('settings-status');
+            status.textContent = 'Loading…';
+            document.getElementById('settings-backdrop').classList.add('open');
+            try {
+                const resp = await fetch('/api/config/prompts');
+                const data = await resp.json();
+                _defaults = data.defaults || {};
+                document.getElementById('summary-prompt').value = data.summary_prompt || '';
+                const ctxEl = document.getElementById('context-prompt');
+                if (ctxEl) ctxEl.value = data.context_prompt || '';
+                status.textContent = '';
+            } catch (e) {
+                status.textContent = 'Failed to load prompts.';
+            }
+        }
+
+        function closeSettings() {
+            document.getElementById('settings-backdrop').classList.remove('open');
+            document.getElementById('settings-status').textContent = '';
+        }
+
+        function resetPrompts() {
+            document.getElementById('summary-prompt').value = _defaults.summary_prompt || '';
+            const ctxEl = document.getElementById('context-prompt');
+            if (ctxEl) ctxEl.value = _defaults.context_prompt || '';
+            document.getElementById('settings-status').textContent = 'Defaults restored — click Save to apply.';
+        }
+
+        async function savePrompts() {
+            const status = document.getElementById('settings-status');
+            status.textContent = 'Saving…';
+            const body = {
+                summary_prompt: document.getElementById('summary-prompt').value.trim(),
+            };
+            const ctxEl = document.getElementById('context-prompt');
+            if (ctxEl) body.context_prompt = ctxEl.value.trim();
+
+            try {
+                const resp = await fetch('/api/config/prompts', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(body),
+                });
+                if (!resp.ok) {
+                    const err = await resp.json();
+                    status.textContent = err.error || 'Save failed.';
+                    return;
+                }
+                status.textContent = 'Saved. New prompts apply to the next story click.';
+                setTimeout(closeSettings, 1500);
+            } catch (e) {
+                status.textContent = 'Save failed — server unreachable.';
+            }
+        }
+
+        // Close on backdrop click (outside the panel)
+        document.getElementById('settings-backdrop').addEventListener('click', function(e) {
+            if (e.target === this) closeSettings();
+        });
 
         // Auto-reload the page after each refresh interval so data stays fresh
         setTimeout(() => location.reload(), {{ refresh_interval_ms }});

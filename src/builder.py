@@ -5,7 +5,7 @@ from pathlib import Path
 
 import jinja2
 
-from src.config import BASE_DIR, DATA_DIR, LOCATION_NAME, TIMEZONE, REFRESH_INTERVAL, USER_NAME, PAGE_TITLE
+from src.config import BASE_DIR, DATA_DIR, LOCATION_NAME, TIMEZONE, REFRESH_INTERVAL, USER_NAME, PAGE_TITLE, AI_SUMMARY_ENABLED, CONTEXT_ENABLED
 from src.fetcher import load_weather
 from src.calendar import load_calendar
 from src.news import load_news, news_categories
@@ -117,6 +117,8 @@ def build_page() -> str:
         news_categories=categories,
         updated_at=now.astimezone().strftime("%I:%M %p").lstrip("0"),
         refresh_interval_ms=REFRESH_INTERVAL * 1000,
+        ai_summary_enabled=AI_SUMMARY_ENABLED,
+        context_enabled=CONTEXT_ENABLED,
     )
 
     return html
