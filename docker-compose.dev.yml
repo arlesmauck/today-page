@@ -16,5 +16,7 @@ services:
       PAGE_TITLE: "Your Morning Paper"
       REFRESH_INTERVAL: "900"
       DATA_DIR: "/app/data"
+      LOG_LEVEL: "DEBUG"
     volumes:
       - ./data:/app/data
+    

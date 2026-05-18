@@ -13,7 +13,6 @@ Low implementation effort, high day-to-day value. Target after the current AI ne
 | **Local news** | Add a "Local" tab automatically using the configured `LOCATION_NAME` as a Google News search query. No extra config needed. |
 | **Source count badge** | Show "4 sources" on cards where multiple publishers covered the same story, as a signal of significance. |
 | **Headlines-only mode** | A compact toggle that collapses all story cards to just the headline and brief — for busy mornings. CSS + 1 line of JS. |
-| **Audio mode** | Read the morning briefing aloud using the browser's built-in Web Speech API. ~5 lines of JS. |
 | **Background context** | A third expandable section per story: "What do I need to know?" — a one-paragraph primer on the broader topic. Fold into the existing Claude prompt at minimal extra cost. |
 
 ---

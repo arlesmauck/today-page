@@ -8,10 +8,15 @@ from src.calendar import refresh_calendar
 from src.news import refresh_news, load_news
 from src.builder import write_page
 
+import os
+_log_level = os.getenv("LOG_LEVEL", "INFO").upper()
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
+    level=getattr(logging, _log_level, logging.INFO),
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
+# trafilatura logs expected failures at WARNING — suppress since we handle them ourselves
+logging.getLogger("trafilatura").setLevel(logging.ERROR)
+logging.getLogger("trafilatura.core").setLevel(logging.ERROR)
 logger = logging.getLogger("scheduler")
 
 

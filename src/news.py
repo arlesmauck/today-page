@@ -1,5 +1,6 @@
 """Fetch and cache news stories from RSS feeds."""
 import json
+import logging
 import os
 import re
 from datetime import datetime, timezone
@@ -9,16 +10,21 @@ import httpx
 
 from src.config import DATA_DIR
 
+logger = logging.getLogger("news")
+
 
 NEWS_FILE = DATA_DIR / "news.json"
 
 # Google News topic feeds — aggregate from hundreds of publishers.
 # These are the primary broad-coverage sources, no config required.
-GOOGLE_NEWS_FEEDS = [
-    ("World",      "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx1YlY4U0FtVnVHZ0pWVXlnQVAB?hl=en-US&gl=US&ceid=US:en"),
-    ("Technology", "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGRqTlhRU0FtVnVHZ0pWVXlnQVAB?hl=en-US&gl=US&ceid=US:en"),
-    ("Science",    "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNR1ptZHpRU0FtVnVHZ0pWVXlnQVAB?hl=en-US&gl=US&ceid=US:en"),
-    ("Health",     "https://news.google.com/rss/topics/CAAqIQgKIhtDQkFTRGdvSUwyMHZNR3QwTlRFU0FtVnVLQUFQAQ?hl=en-US&gl=US&ceid=US:en"),
+# Default feeds — direct publisher RSS that return real article URLs
+# (needed for AI article fetching to work)
+DEFAULT_FEEDS = [
+    ("World",      "NEWS_FEED_WORLD_URL",  "https://feeds.bbci.co.uk/news/world/rss.xml"),
+    ("Technology", "NEWS_FEED_TECH_URL",   "https://feeds.arstechnica.com/arstechnica/technology-lab"),
+    ("Science",    "NEWS_FEED_SCI_URL",    "https://www.sciencedaily.com/rss/top/science.xml"),
+    ("Health",     "NEWS_FEED_HEALTH_URL", "https://feeds.bbci.co.uk/news/health/rss.xml"),
+    ("US",         "NEWS_FEED_US_URL",     "https://feeds.npr.org/1001/rss.xml"),
 ]
 
 # Max stories kept per category after deduplication
@@ -31,14 +37,24 @@ def _strip_html(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
-def _load_user_feeds() -> list[tuple[str, str]]:
-    """Return [(category, url), ...] from user-configured env vars."""
-    feeds = []
+def _load_feeds() -> list[tuple[str, str]]:
+    """
+    Return [(category, url), ...] for all feeds.
+    Default feeds ship with the app; env vars override individual categories
+    or add new ones.
+    """
+    # Start with defaults, allow env var overrides per category
+    known_env_vars = {env_var for _, env_var, _ in DEFAULT_FEEDS}
+    feeds: dict[str, str] = {
+        label: os.environ.get(env_var, default_url)
+        for label, env_var, default_url in DEFAULT_FEEDS
+    }
+    # Add any extra user-defined feeds not in the defaults
     for key, val in os.environ.items():
-        if key.startswith("NEWS_FEED_") and key.endswith("_URL") and val:
+        if key.startswith("NEWS_FEED_") and key.endswith("_URL") and key not in known_env_vars and val:
             label = key.removeprefix("NEWS_FEED_").removesuffix("_URL").replace("_", " ").title()
-            feeds.append((label, val))
-    return feeds
+            feeds[label] = val
+    return list(feeds.items())
 
 
 async def _fetch_feed(client: httpx.AsyncClient, category: str, url: str) -> list[dict]:
@@ -48,7 +64,7 @@ async def _fetch_feed(client: httpx.AsyncClient, category: str, url: str) -> lis
         resp.raise_for_status()
         parsed = feedparser.parse(resp.text)
     except Exception as e:
-        print(f"News feed error ({url}): {e}")
+        logger.warning("Feed fetch failed (%s): %s", url, e)
         return []
 
     feed_title = parsed.feed.get("title", url.split("/")[2])
@@ -82,19 +98,11 @@ async def _fetch_feed(client: httpx.AsyncClient, category: str, url: str) -> lis
 
 async def refresh_news() -> list[dict]:
     """Fetch all RSS feeds and save deduplicated stories to disk."""
-    user_feeds = _load_user_feeds()
-
-    # Build per-category story lists: user feeds first (preferred), then Google News
+    feeds = _load_feeds()
     category_stories: dict[str, list[dict]] = {}
 
     async with httpx.AsyncClient(timeout=20.0) as client:
-        # User-configured feeds first so they take priority in dedup
-        for category, url in user_feeds:
-            stories = await _fetch_feed(client, category, url)
-            category_stories.setdefault(category, []).extend(stories)
-
-        # Google News broad coverage
-        for category, url in GOOGLE_NEWS_FEEDS:
+        for category, url in feeds:
             stories = await _fetch_feed(client, category, url)
             category_stories.setdefault(category, []).extend(stories)
 
@@ -112,6 +120,14 @@ async def refresh_news() -> list[dict]:
                 break
         all_stories.extend(kept)
 
+    category_counts = {}
+    for s in all_stories:
+        category_counts[s["category"]] = category_counts.get(s["category"], 0) + 1
+    logger.info(
+        "News fetched — %d stories: %s",
+        len(all_stories),
+        ", ".join(f"{cat} ({n})" for cat, n in category_counts.items()),
+    )
     NEWS_FILE.write_text(json.dumps(all_stories, indent=2, ensure_ascii=False))
     return all_stories
 
