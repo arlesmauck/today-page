@@ -2,7 +2,7 @@
 import asyncio
 import logging
 
-from src.config import REFRESH_INTERVAL
+from src.config import REFRESH_INTERVAL, NEWS_CURATION_ENABLED
 from src.fetcher import refresh_weather
 from src.calendar import refresh_calendar
 from src.news import refresh_news
@@ -43,6 +43,14 @@ async def run_scheduler():
     except Exception as e:
         logger.error("Initial news fetch failed: %s", e)
 
+    if NEWS_CURATION_ENABLED:
+        try:
+            from src.news_curator import curate_news
+            unselected = await curate_news()
+            logger.info("Initial news curation complete — %d stories set aside", unselected)
+        except Exception as e:
+            logger.error("Initial news curation failed — showing all stories: %s", e)
+
     try:
         write_page()
         logger.info("Page rebuilt")
@@ -68,6 +76,14 @@ async def run_scheduler():
             logger.info("News refresh complete")
         except Exception as e:
             logger.error("News refresh failed: %s", e)
+
+        if NEWS_CURATION_ENABLED:
+            try:
+                from src.news_curator import curate_news
+                unselected = await curate_news()
+                logger.info("News curation complete — %d stories set aside", unselected)
+            except Exception as e:
+                logger.error("News curation failed — showing all stories: %s", e)
 
         try:
             write_page()

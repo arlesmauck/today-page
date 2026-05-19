@@ -45,6 +45,10 @@ AI_API_KEY = os.getenv("AI_API_KEY", "")
 AI_API_BASE = os.getenv("AI_API_BASE", "")  # optional; required for remote Ollama
 AI_SUMMARY_ENABLED = bool(AI_API_KEY) or AI_MODEL.startswith("ollama/")
 
+# AI news curation — AI reviews all fetched stories and selects the most newsworthy
+# per category before display. Requires AI_SUMMARY_ENABLED (uses the same AI_MODEL).
+NEWS_CURATION_ENABLED = AI_SUMMARY_ENABLED and os.getenv("NEWS_CURATION_ENABLED", "true").lower() not in ("false", "0", "no", "off")
+
 # Optional second model for per-story background context (e.g. Perplexity sonar with web search)
 CONTEXT_MODEL = os.getenv("CONTEXT_MODEL", "")
 CONTEXT_ENABLED = bool(CONTEXT_MODEL and (AI_API_KEY or CONTEXT_MODEL.startswith("ollama/")))

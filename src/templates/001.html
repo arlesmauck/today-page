@@ -18,8 +18,19 @@
             padding: 4rem 1.5rem;
         }
         .page {
-            max-width: 680px;
+            max-width: 1100px;
             margin: 0 auto;
+        }
+        .content-layout {
+            display: grid;
+            grid-template-columns: 360px 1fr;
+            gap: 2.5rem;
+            align-items: start;
+        }
+        @media (max-width: 800px) {
+            .content-layout {
+                grid-template-columns: 1fr;
+            }
         }
         .sans { font-family: 'Inter', sans-serif; }
 
@@ -94,6 +105,40 @@
             margin-top: 0.5rem;
             display: flex;
             gap: 1.25rem;
+        }
+
+        .forecast-row {
+            display: flex;
+            gap: 0;
+            margin-top: 1.1rem;
+            border-top: 1px solid #e8e4dc;
+            padding-top: 0.9rem;
+        }
+        .forecast-day {
+            flex: 1;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+        .forecast-day-name {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #aaa;
+        }
+        .forecast-temp {
+            font-size: 1.1rem;
+            font-weight: 300;
+            color: #3a3530;
+        }
+        .forecast-desc {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.68rem;
+            color: #bbb;
+            line-height: 1.3;
         }
 
         /* Events */
@@ -315,6 +360,13 @@
             margin-top: 0.75rem;
             color: #888;
         }
+        .story-reason {
+            font-size: 0.72rem;
+            color: #b0a898;
+            margin-bottom: 0.15rem;
+            font-style: italic;
+            letter-spacing: 0.01em;
+        }
     </style>
 </head>
 <body>
@@ -326,6 +378,8 @@
             <div class="masthead-rule"></div>
         </header>
 
+        <div class="content-layout">
+        <div class="left-col">
         <!-- Weather -->
         <section class="card">
             <p class="section-title">{{ location }}</p>
@@ -338,6 +392,17 @@
                 <span>Wind {{ weather.wind_speed_mph|round|int }} mph</span>
                 <span>Humidity {{ weather.humidity }}%</span>
             </div>
+            {% if forecast %}
+            <div class="forecast-row">
+                {% for day in forecast %}
+                <div class="forecast-day">
+                    <span class="forecast-day-name">{{ day.day }}</span>
+                    <span class="forecast-temp">{% if day.temp_f is not none %}{{ day.temp_f }}°{% else %}—{% endif %}</span>
+                    <span class="forecast-desc">{{ day.desc }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
         </section>
 
         <!-- Calendar -->
@@ -383,6 +448,7 @@
             </div>
             {% endif %}
         </section>
+        </div><!-- /.left-col -->
 
         <!-- News -->
         <section>
@@ -399,6 +465,9 @@
             <div class="story-card" data-category="{{ story.category }}">
                 <p class="story-source">{{ story.source }}</p>
                 <p class="story-headline">{{ story.headline }}</p>
+                {% if story.selected_reason %}
+                <p class="story-reason sans">{{ story.selected_reason }}</p>
+                {% endif %}
                 <p class="story-lede">{{ story.lede }}</p>
                 {% if ai_summary_enabled and story.url %}
                 <button class="expand-btn"
@@ -426,7 +495,13 @@
             {% else %}
             <p class="empty-msg" style="padding:1rem 0;">No news available.</p>
             {% endif %}
+            {% if unselected_count %}
+            <p class="sans" style="font-size:0.72rem;color:#bbb;margin-top:1.25rem;text-align:right;letter-spacing:0.03em;">
+                {{ unselected_count }} {{ "story" if unselected_count == 1 else "stories" }} set aside
+            </p>
+            {% endif %}
         </section>
+        </div><!-- /.content-layout -->
 
         <footer>
             <p>Updated at {{ updated_at }}</p>
@@ -449,6 +524,12 @@
             <div class="settings-field">
                 <label>Background context prompt — used when generating Background</label>
                 <textarea id="context-prompt" rows="6"></textarea>
+            </div>
+            {% endif %}
+            {% if curation_enabled %}
+            <div class="settings-field">
+                <label>Curation prompt — used to select which stories appear in your feed</label>
+                <textarea id="curation-prompt" rows="12"></textarea>
             </div>
             {% endif %}
             <div class="settings-actions">
@@ -557,6 +638,8 @@
                 document.getElementById('summary-prompt').value = data.summary_prompt || '';
                 const ctxEl = document.getElementById('context-prompt');
                 if (ctxEl) ctxEl.value = data.context_prompt || '';
+                const curEl = document.getElementById('curation-prompt');
+                if (curEl) curEl.value = data.curation_prompt || '';
                 status.textContent = '';
             } catch (e) {
                 status.textContent = 'Failed to load prompts.';
@@ -572,6 +655,8 @@
             document.getElementById('summary-prompt').value = _defaults.summary_prompt || '';
             const ctxEl = document.getElementById('context-prompt');
             if (ctxEl) ctxEl.value = _defaults.context_prompt || '';
+            const curEl = document.getElementById('curation-prompt');
+            if (curEl) curEl.value = _defaults.curation_prompt || '';
             document.getElementById('settings-status').textContent = 'Defaults restored — click Save to apply.';
         }
 
@@ -583,6 +668,8 @@
             };
             const ctxEl = document.getElementById('context-prompt');
             if (ctxEl) body.context_prompt = ctxEl.value.trim();
+            const curEl = document.getElementById('curation-prompt');
+            if (curEl) body.curation_prompt = curEl.value.trim();
 
             try {
                 const resp = await fetch('/api/config/prompts', {

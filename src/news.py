@@ -28,8 +28,19 @@ DEFAULT_FEEDS = [
     ("US",         "NEWS_FEED_US_URL",     "https://feeds.npr.org/1001/rss.xml"),
 ]
 
-# Max stories kept per category after deduplication
+# Max stories kept per category after deduplication (final display cap)
 STORIES_PER_CATEGORY = 6
+
+# Google News topic feeds — broader coverage alongside direct publisher RSS.
+# Same category labels so stories merge into existing tabs.
+# Disable individually: NEWS_GNEWS_WORLD=false, etc.
+_GNEWS_BASE = "https://news.google.com/rss/topics"
+SUPPLEMENTARY_FEEDS = [
+    ("World",      "NEWS_GNEWS_WORLD",  f"{_GNEWS_BASE}/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx1YlY4U0FtVnVHZ0pWVXlnQVAB"),
+    ("Technology", "NEWS_GNEWS_TECH",   f"{_GNEWS_BASE}/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGRqTlhRU0FtVnVHZ0pWVXlnQVAB"),
+    ("Science",    "NEWS_GNEWS_SCI",    f"{_GNEWS_BASE}/CAAqJggKIiBDQkFTRWdvSUwyMHZNR1ptZHpRU0FtVnVHZ0pWVXlnQVAB"),
+    ("Health",     "NEWS_GNEWS_HEALTH", f"{_GNEWS_BASE}/CAAqIQgKIhtDQkFTRGdvSUwyMHZNR3QwTlRFU0FtVnVLQUFQAQ"),
+]
 
 
 def _strip_html(text: str) -> str:
@@ -60,7 +71,11 @@ def _load_feeds() -> list[tuple[str, str]]:
         encoded = quote(LOCATION_NAME)
         feeds["Local"] = f"https://news.google.com/rss/search?q={encoded}&hl=en-US&gl=US&ceid=US:en"
         logger.debug("Auto-added Local feed for %r via Google News search", LOCATION_NAME)
-    return list(feeds.items())
+    result = list(feeds.items())
+    for label, env_var, url in SUPPLEMENTARY_FEEDS:
+        if os.environ.get(env_var, "true").lower() not in ("false", "0", "no", "off"):
+            result.append((label, url))
+    return result
 
 
 async def _fetch_feed(client: httpx.AsyncClient, category: str, url: str) -> list[dict]:
@@ -75,7 +90,7 @@ async def _fetch_feed(client: httpx.AsyncClient, category: str, url: str) -> lis
 
     feed_title = parsed.feed.get("title", url.split("/")[2])
     stories = []
-    for entry in parsed.entries[:STORIES_PER_CATEGORY]:
+    for entry in parsed.entries[:STORIES_PER_CATEGORY * 2]:
         # Google News embeds the publisher in entry.source; fall back to feed title
         source_name = (
             entry.get("source", {}).get("title")
@@ -122,7 +137,7 @@ async def refresh_news() -> list[dict]:
             if url and url not in seen_urls:
                 seen_urls.add(url)
                 kept.append(story)
-            if len(kept) >= STORIES_PER_CATEGORY:
+            if len(kept) >= STORIES_PER_CATEGORY * 2:
                 break
         all_stories.extend(kept)
 

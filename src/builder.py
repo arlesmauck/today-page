@@ -1,11 +1,12 @@
 """Build the static index.html from template + live data."""
+import json
 from datetime import datetime, timezone
 from itertools import groupby
 from pathlib import Path
 
 import jinja2
 
-from src.config import BASE_DIR, DATA_DIR, LOCATION_NAME, TIMEZONE, REFRESH_INTERVAL, USER_NAME, PAGE_TITLE, AI_SUMMARY_ENABLED, CONTEXT_ENABLED
+from src.config import BASE_DIR, DATA_DIR, LOCATION_NAME, TIMEZONE, REFRESH_INTERVAL, USER_NAME, PAGE_TITLE, AI_SUMMARY_ENABLED, CONTEXT_ENABLED, NEWS_CURATION_ENABLED
 from src.fetcher import load_weather
 from src.calendar import load_calendar
 from src.news import load_news, news_categories
@@ -25,6 +26,16 @@ def format_time(dt_str: str) -> str:
         return ""
 
 
+def _time_of_day_greeting(now) -> str:
+    hour = now.hour
+    if hour < 12:
+        return "Good Morning"
+    elif hour < 17:
+        return "Good Afternoon"
+    else:
+        return "Good Evening"
+
+
 def build_page() -> str:
     """Fetch data and render the HTML page."""
     now = datetime.now(TIMEZONE)
@@ -34,6 +45,20 @@ def build_page() -> str:
     current = weather.get("current", {}) if weather else {}
     daily = weather.get("daily", []) if weather else []
     temp_high = daily[0].get("temp_f") if daily else None
+
+    # 5-day forecast: skip today (index 0), take next 5 days
+    forecast = []
+    for day in daily[1:6]:
+        try:
+            dt = datetime.fromisoformat(day["date"])
+            day_name = dt.strftime("%a")
+        except Exception:
+            day_name = day.get("date", "")
+        forecast.append({
+            "day": day_name,
+            "temp_f": round(day["temp_f"]) if day.get("temp_f") is not None else None,
+            "desc": day.get("short_desc", ""),
+        })
 
     # Load calendar
     cal = load_calendar()
@@ -94,6 +119,16 @@ def build_page() -> str:
     news = load_news()
     categories = news_categories()
 
+    # Load unselected story count for curation badge
+    unselected_count = 0
+    if NEWS_CURATION_ENABLED:
+        from src.news_curator import UNSELECTED_STORIES_FILE
+        if UNSELECTED_STORIES_FILE.exists():
+            try:
+                unselected_count = len(json.loads(UNSELECTED_STORIES_FILE.read_text()))
+            except (json.JSONDecodeError, OSError):
+                pass
+
     # Render template
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(TEMPLATE_DIR))
     template = env.get_template("001.html")
@@ -101,7 +136,7 @@ def build_page() -> str:
     html = template.render(
         title=PAGE_TITLE,
         date_str=now.strftime("%A, %B %d, %Y"),
-        greeting=f"Good Morning, {USER_NAME}",
+        greeting=f"{_time_of_day_greeting(now)}, {USER_NAME}",
         location=LOCATION_NAME,
         weather={
             "temp_f": current.get("temperature_f") or 62,
@@ -110,6 +145,7 @@ def build_page() -> str:
             "wind_speed_mph": current.get("wind_speed_mph") or 8,
             "humidity": current.get("humidity") or 18,
         },
+        forecast=forecast,
         events_today=events_today,
         events_tomorrow=events_tomorrow,
         events_lookahead=events_lookahead,
@@ -119,6 +155,8 @@ def build_page() -> str:
         refresh_interval_ms=REFRESH_INTERVAL * 1000,
         ai_summary_enabled=AI_SUMMARY_ENABLED,
         context_enabled=CONTEXT_ENABLED,
+        curation_enabled=NEWS_CURATION_ENABLED,
+        unselected_count=unselected_count,
     )
 
     return html
