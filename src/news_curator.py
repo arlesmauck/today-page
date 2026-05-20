@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 
 from src.config import (
     AI_MODEL, AI_API_KEY, AI_API_BASE, NEWS_CURATION_ENABLED,
-    REFRESH_INTERVAL, DATA_DIR,
+    REFRESH_INTERVAL, DATA_DIR, get_category_quality,
 )
 from src.news import NEWS_FILE, STORIES_PER_CATEGORY, load_news
 
@@ -17,22 +17,24 @@ CURATION_CACHE_FILE = DATA_DIR / "curation_cache.json"
 UNSELECTED_STORIES_FILE = DATA_DIR / "unselected_stories.json"
 
 DEFAULT_CURATION_PROMPT = """\
-You are an editor for a personal morning briefing. Review these news stories \
-and select the most newsworthy ones for each category.
+You are an editor for a personal morning briefing. Each category is tagged with \
+a display mode in brackets — follow it exactly.
 
-Select stories that:
-- Report significant events with real-world impact (policy, science, diplomacy, economy)
-- Contain specific facts, not vague claims
-- Will still matter tomorrow
-- Come from original reporting, not pure aggregation
+STRICT [STRICT]: Apply an absolute newsworthiness standard.
+  - Include ONLY stories reporting significant events with clear real-world impact \
+(major policy, science breakthroughs, diplomacy, economics, public safety).
+  - Specific verifiable facts required — no vague claims.
+  - If nothing clears the bar, return an empty list for that category. 0 is correct.
 
-Skip stories that are:
-- Celebrity gossip or entertainment fluff
-- Clickbait or engagement bait
-- Listicles or round-up pieces with no original reporting
-- Viral social media moments with no broader significance
+RELAXED [RELAXED]: Select 2-4 of the best available stories.
+  - Prefer real-world impact but include anything genuinely interesting or informative.
+  - Fewer is fine if the pool is weak. Always pick at least 1 if stories exist.
 
-Select 2-4 stories per category based on quality. Fewer is fine if the pool is weak.
+For ALL categories, skip:
+  - Celebrity gossip or entertainment fluff
+  - Clickbait or engagement bait
+  - Listicles with no original reporting
+  - Viral moments with no broader significance
 
 Respond with valid JSON only, no markdown fences:
 {
@@ -75,10 +77,11 @@ def _save_cache(cache: dict) -> None:
 
 
 def _build_prompt_message(stories_by_category: dict[str, list[tuple[int, dict]]]) -> str:
-    """Build the user message listing all stories with IDs."""
+    """Build the user message listing all stories with IDs and per-category mode tag."""
     lines = []
     for category, numbered_stories in stories_by_category.items():
-        lines.append(f"=== {category.upper()} ===")
+        mode = get_category_quality(category).upper()
+        lines.append(f"=== {category.upper()} [{mode}] ===")
         for story_id, story in numbered_stories:
             headline = story.get("headline", "")
             lede = story.get("lede", "")

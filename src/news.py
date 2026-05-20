@@ -42,6 +42,18 @@ SUPPLEMENTARY_FEEDS = [
     ("Health",     "NEWS_GNEWS_HEALTH", f"{_GNEWS_BASE}/CAAqIQgKIhtDQkFTRGdvSUwyMHZNR3QwTlRFU0FtVnVLQUFQAQ"),
 ]
 
+# Maps env var category keys → category labels used in the app.
+# Used to detect NEWS_FEED_{KEY}_{SUFFIX}_URL vars that should merge into
+# an existing category tab rather than create a new one.
+_CATEGORY_KEY_MAP = {
+    "WORLD":  "World",
+    "TECH":   "Technology",
+    "SCI":    "Science",
+    "HEALTH": "Health",
+    "US":     "US",
+    "LOCAL":  "Local",
+}
+
 
 def _strip_html(text: str) -> str:
     """Remove HTML tags and collapse whitespace."""
@@ -61,11 +73,26 @@ def _load_feeds() -> list[tuple[str, str]]:
         label: os.environ.get(env_var, default_url)
         for label, env_var, default_url in DEFAULT_FEEDS
     }
-    # Add any extra user-defined feeds not in the defaults
-    for key, val in os.environ.items():
-        if key.startswith("NEWS_FEED_") and key.endswith("_URL") and key not in known_env_vars and val:
-            label = key.removeprefix("NEWS_FEED_").removesuffix("_URL").replace("_", " ").title()
+    # Scan env vars for additional and custom feeds.
+    # NEWS_FEED_{KEY}_{SUFFIX}_URL  — merges into an existing category tab
+    #   e.g. NEWS_FEED_WORLD_REUTERS_URL → World tab (additional source)
+    # NEWS_FEED_{ANYTHING}_URL      — creates a new tab (existing behaviour)
+    additional: list[tuple[str, str]] = []
+    for key, val in sorted(os.environ.items()):
+        if not (key.startswith("NEWS_FEED_") and key.endswith("_URL") and val):
+            continue
+        if key in known_env_vars:
+            continue
+        body = key.removeprefix("NEWS_FEED_").removesuffix("_URL")  # e.g. WORLD_REUTERS
+        parts = body.split("_", 1)
+        if len(parts) == 2 and parts[0] in _CATEGORY_KEY_MAP:
+            # Merges into existing category
+            additional.append((_CATEGORY_KEY_MAP[parts[0]], val))
+        else:
+            # New tab
+            label = body.replace("_", " ").title()
             feeds[label] = val
+
     # Auto-add Local tab from Google News search if not already configured
     if "Local" not in feeds and LOCATION_NAME:
         encoded = quote(LOCATION_NAME)
@@ -75,6 +102,7 @@ def _load_feeds() -> list[tuple[str, str]]:
     for label, env_var, url in SUPPLEMENTARY_FEEDS:
         if os.environ.get(env_var, "true").lower() not in ("false", "0", "no", "off"):
             result.append((label, url))
+    result.extend(additional)
     return result
 
 

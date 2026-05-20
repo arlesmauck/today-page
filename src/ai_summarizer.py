@@ -49,12 +49,13 @@ PROMPTS_FILE = DATA_DIR / "prompts.json"
 
 def _load_prompts() -> dict[str, str]:
     """Return active prompts, falling back to hardcoded defaults if file missing or invalid."""
-    from src.morning_briefer import DEFAULT_BRIEFING_PROMPT
+    from src.morning_briefer import DEFAULT_BRIEFING_PROMPT, DEFAULT_SELECTION_PROMPT
     from src.news_curator import DEFAULT_CURATION_PROMPT
     defaults = {
         "summary_prompt": SYSTEM_PROMPT,
         "context_prompt": CONTEXT_SYSTEM_PROMPT,
         "briefing_prompt": DEFAULT_BRIEFING_PROMPT,
+        "selection_prompt": DEFAULT_SELECTION_PROMPT,
         "curation_prompt": DEFAULT_CURATION_PROMPT,
     }
     if PROMPTS_FILE.exists():

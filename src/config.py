@@ -49,6 +49,14 @@ AI_SUMMARY_ENABLED = bool(AI_API_KEY) or AI_MODEL.startswith("ollama/")
 # per category before display. Requires AI_SUMMARY_ENABLED (uses the same AI_MODEL).
 NEWS_CURATION_ENABLED = AI_SUMMARY_ENABLED and os.getenv("NEWS_CURATION_ENABLED", "true").lower() not in ("false", "0", "no", "off")
 
+# Per-category quality gate for news curation.
+# Returns 'strict' (absolute pass/fail — 0 stories ok) or 'relaxed' (2-4 best available).
+# Env var format: NEWS_QUALITY_{CATEGORY} e.g. NEWS_QUALITY_WORLD=strict
+def get_category_quality(category: str) -> str:
+    key = f"NEWS_QUALITY_{category.upper().replace(' ', '_')}"
+    val = os.getenv(key, "relaxed").lower().strip()
+    return "strict" if val == "strict" else "relaxed"
+
 # Optional second model for per-story background context (e.g. Perplexity sonar with web search)
 CONTEXT_MODEL = os.getenv("CONTEXT_MODEL", "")
 CONTEXT_ENABLED = bool(CONTEXT_MODEL and (AI_API_KEY or CONTEXT_MODEL.startswith("ollama/")))
