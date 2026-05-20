@@ -2,7 +2,7 @@
 import asyncio
 import logging
 
-from src.config import REFRESH_INTERVAL, NEWS_CURATION_ENABLED
+from src.config import REFRESH_INTERVAL, NEWS_CURATION_ENABLED, AI_SUMMARY_ENABLED
 from src.fetcher import refresh_weather
 from src.calendar import refresh_calendar
 from src.news import refresh_news
@@ -51,6 +51,23 @@ async def run_scheduler():
         except Exception as e:
             logger.error("Initial news curation failed — showing all stories: %s", e)
 
+    if AI_SUMMARY_ENABLED:
+        try:
+            from src.news_clusterer import cluster_news
+            merged = await cluster_news()
+            logger.info("Initial clustering complete — %d stories merged", merged)
+        except Exception as e:
+            logger.error("Initial clustering failed: %s", e)
+
+    if AI_SUMMARY_ENABLED:
+        try:
+            from src.morning_briefer import generate_briefing
+            briefing = await generate_briefing()
+            if briefing:
+                logger.info("Initial morning briefing generated (%d chars)", len(briefing))
+        except Exception as e:
+            logger.error("Initial morning briefing failed: %s", e)
+
     try:
         write_page()
         logger.info("Page rebuilt")
@@ -84,6 +101,23 @@ async def run_scheduler():
                 logger.info("News curation complete — %d stories set aside", unselected)
             except Exception as e:
                 logger.error("News curation failed — showing all stories: %s", e)
+
+        if AI_SUMMARY_ENABLED:
+            try:
+                from src.news_clusterer import cluster_news
+                merged = await cluster_news()
+                logger.info("Clustering complete — %d stories merged", merged)
+            except Exception as e:
+                logger.error("Clustering failed: %s", e)
+
+        if AI_SUMMARY_ENABLED:
+            try:
+                from src.morning_briefer import generate_briefing
+                briefing = await generate_briefing()
+                if briefing:
+                    logger.info("Morning briefing generated (%d chars)", len(briefing))
+            except Exception as e:
+                logger.error("Morning briefing failed: %s", e)
 
         try:
             write_page()

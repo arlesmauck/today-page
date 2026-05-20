@@ -129,6 +129,16 @@ def build_page() -> str:
             except (json.JSONDecodeError, OSError):
                 pass
 
+    # Load morning briefing
+    morning_briefing = None
+    if AI_SUMMARY_ENABLED:
+        from src.morning_briefer import BRIEFING_FILE
+        if BRIEFING_FILE.exists():
+            try:
+                morning_briefing = json.loads(BRIEFING_FILE.read_text()).get("briefing")
+            except (json.JSONDecodeError, OSError):
+                pass
+
     # Render template
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(TEMPLATE_DIR))
     template = env.get_template("001.html")
@@ -157,6 +167,7 @@ def build_page() -> str:
         context_enabled=CONTEXT_ENABLED,
         curation_enabled=NEWS_CURATION_ENABLED,
         unselected_count=unselected_count,
+        morning_briefing=morning_briefing,
     )
 
     return html

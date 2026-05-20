@@ -23,7 +23,7 @@
         }
         .content-layout {
             display: grid;
-            grid-template-columns: 360px 1fr;
+            grid-template-columns: 440px 1fr;
             gap: 2.5rem;
             align-items: start;
         }
@@ -144,8 +144,8 @@
         /* Events */
         .event {
             display: flex;
-            gap: 1rem;
-            padding: 0.5rem 0;
+            gap: 1.25rem;
+            padding: 0.75rem 0;
             border-bottom: 1px solid #f0ede6;
         }
         .event:last-child { border-bottom: none; }
@@ -171,6 +171,19 @@
         }
         .event-time.empty-label {
             visibility: hidden;
+        }
+
+        /* Morning briefing */
+        .morning-briefing {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid #e8e4dc;
+        }
+        .briefing-text {
+            font-size: 1.05rem;
+            line-height: 1.7;
+            color: #4a4540;
+            font-style: italic;
         }
 
         /* News tabs */
@@ -452,6 +465,12 @@
 
         <!-- News -->
         <section>
+            {% if morning_briefing %}
+            <div class="morning-briefing">
+                <p class="section-title">This Morning</p>
+                <p class="briefing-text">{{ morning_briefing }}</p>
+            </div>
+            {% endif %}
             {% if news_categories %}
             <div class="tabs">
                 {% for cat in news_categories %}
@@ -532,6 +551,10 @@
                 <textarea id="curation-prompt" rows="12"></textarea>
             </div>
             {% endif %}
+            <div class="settings-field">
+                <label>Morning briefing prompt — used to write the opening paragraph</label>
+                <textarea id="briefing-prompt" rows="6"></textarea>
+            </div>
             <div class="settings-actions">
                 <button class="btn-primary" onclick="savePrompts()">Save</button>
                 <button onclick="resetPrompts()">Reset to default</button>
@@ -563,8 +586,9 @@
         function toggleDetail(btn) {
             const detail = btn.nextElementSibling;
             const isHidden = detail.hidden;
+            if (!btn.dataset.label) btn.dataset.label = btn.textContent;
             detail.hidden = !isHidden;
-            btn.textContent = isHidden ? 'Less' : btn.dataset.label || btn.textContent;
+            btn.textContent = isHidden ? 'Less' : btn.dataset.label;
         }
 
         // Fetch AI summary on first click, then toggle like normal
@@ -616,6 +640,7 @@
                 }
 
                 btn.dataset.loaded = '1';
+                btn.disabled = false;
                 detailDiv.hidden = false;
                 btn.textContent = 'Less';
             } catch (e) {
@@ -640,6 +665,8 @@
                 if (ctxEl) ctxEl.value = data.context_prompt || '';
                 const curEl = document.getElementById('curation-prompt');
                 if (curEl) curEl.value = data.curation_prompt || '';
+                const brfEl = document.getElementById('briefing-prompt');
+                if (brfEl) brfEl.value = data.briefing_prompt || '';
                 status.textContent = '';
             } catch (e) {
                 status.textContent = 'Failed to load prompts.';
@@ -657,6 +684,8 @@
             if (ctxEl) ctxEl.value = _defaults.context_prompt || '';
             const curEl = document.getElementById('curation-prompt');
             if (curEl) curEl.value = _defaults.curation_prompt || '';
+            const brfEl = document.getElementById('briefing-prompt');
+            if (brfEl) brfEl.value = _defaults.briefing_prompt || '';
             document.getElementById('settings-status').textContent = 'Defaults restored — click Save to apply.';
         }
 
@@ -670,6 +699,8 @@
             if (ctxEl) body.context_prompt = ctxEl.value.trim();
             const curEl = document.getElementById('curation-prompt');
             if (curEl) body.curation_prompt = curEl.value.trim();
+            const brfEl = document.getElementById('briefing-prompt');
+            if (brfEl) body.briefing_prompt = brfEl.value.trim();
 
             try {
                 const resp = await fetch('/api/config/prompts', {

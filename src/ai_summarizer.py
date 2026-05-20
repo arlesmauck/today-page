@@ -49,16 +49,21 @@ PROMPTS_FILE = DATA_DIR / "prompts.json"
 
 def _load_prompts() -> dict[str, str]:
     """Return active prompts, falling back to hardcoded defaults if file missing or invalid."""
+    from src.morning_briefer import DEFAULT_BRIEFING_PROMPT
+    from src.news_curator import DEFAULT_CURATION_PROMPT
+    defaults = {
+        "summary_prompt": SYSTEM_PROMPT,
+        "context_prompt": CONTEXT_SYSTEM_PROMPT,
+        "briefing_prompt": DEFAULT_BRIEFING_PROMPT,
+        "curation_prompt": DEFAULT_CURATION_PROMPT,
+    }
     if PROMPTS_FILE.exists():
         try:
             data = json.loads(PROMPTS_FILE.read_text())
-            return {
-                "summary_prompt": data.get("summary_prompt") or SYSTEM_PROMPT,
-                "context_prompt": data.get("context_prompt") or CONTEXT_SYSTEM_PROMPT,
-            }
+            return {key: data.get(key) or default for key, default in defaults.items()}
         except (json.JSONDecodeError, OSError):
             logger.warning("prompts.json unreadable — using defaults")
-    return {"summary_prompt": SYSTEM_PROMPT, "context_prompt": CONTEXT_SYSTEM_PROMPT}
+    return defaults
 
 
 def _load_cache() -> dict:
