@@ -8,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        :root { font-size: 17px; }
         body {
             font-family: 'Crimson Text', Georgia, serif;
             color: #2d2d2d;
@@ -18,19 +19,46 @@
             padding: 4rem 1.5rem;
         }
         .page {
-            max-width: 1100px;
+            max-width: 1600px;
             margin: 0 auto;
         }
         .content-layout {
             display: grid;
-            grid-template-columns: 440px 1fr;
+            grid-template-columns: 380px 1fr 320px;
             gap: 2.5rem;
             align-items: start;
+        }
+        @media (max-width: 1200px) {
+            .content-layout {
+                grid-template-columns: 380px 1fr;
+            }
+            .right-col { display: none; }
         }
         @media (max-width: 800px) {
             .content-layout {
                 grid-template-columns: 1fr;
             }
+        }
+        /* Placeholder panel */
+        .placeholder-panel {
+            background: #fff;
+            border: 1px dashed #ddd;
+            border-radius: 4px;
+            padding: 1.5rem;
+            color: #bbb;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.8rem;
+            text-align: center;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .placeholder-panel .ph-icon {
+            font-size: 2rem;
+            opacity: 0.4;
         }
         .sans { font-family: 'Inter', sans-serif; }
 
@@ -520,6 +548,14 @@
             </p>
             {% endif %}
         </section>
+        <!-- Right column placeholder -->
+        <div class="right-col">
+            <div class="placeholder-panel">
+                <span class="ph-icon">⬜</span>
+                <strong>Coming soon</strong>
+                <span>This panel is reserved for a future widget</span>
+            </div>
+        </div>
         </div><!-- /.content-layout -->
 
         <footer>
