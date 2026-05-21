@@ -63,3 +63,12 @@ CONTEXT_ENABLED = bool(CONTEXT_MODEL and (AI_API_KEY or CONTEXT_MODEL.startswith
 # Max context LLM calls per enrichment cycle. Caps cost when many new stories arrive at once.
 # Set to 0 to disable the cap (call context for every new story).
 CONTEXT_MAX_PER_REFRESH = int(os.getenv("CONTEXT_MAX_PER_REFRESH", "10"))
+# API key for the context model — may differ from AI_API_KEY
+# (e.g. Perplexity sonar uses a separate key from the main summarizer)
+CONTEXT_API_KEY = os.getenv("CONTEXT_API_KEY", AI_API_KEY)
+
+# ---- Tuning constants (overridable via env vars) ----
+STORIES_PER_CATEGORY = int(os.getenv("STORIES_PER_CATEGORY", "6"))
+CLUSTER_THRESHOLD = float(os.getenv("CLUSTER_THRESHOLD", "0.3"))
+MAX_ARTICLE_CHARS = int(os.getenv("MAX_ARTICLE_CHARS", "8000"))
+_MAX_BRIEFING_CANDIDATES = int(os.getenv("MAX_BRIEFING_CANDIDATES", "15"))

@@ -5,11 +5,13 @@ import os
 import re
 from datetime import datetime, timezone
 
+import asyncio
+
 import feedparser
 import httpx
 from urllib.parse import quote
 
-from src.config import DATA_DIR, LOCATION_NAME
+from src.config import DATA_DIR, LOCATION_NAME, STORIES_PER_CATEGORY
 
 logger = logging.getLogger("news")
 
@@ -27,9 +29,6 @@ DEFAULT_FEEDS = [
     ("Health",     "NEWS_FEED_HEALTH_URL", "https://feeds.bbci.co.uk/news/health/rss.xml"),
     ("US",         "NEWS_FEED_US_URL",     "https://feeds.npr.org/1001/rss.xml"),
 ]
-
-# Max stories kept per category after deduplication (final display cap)
-STORIES_PER_CATEGORY = 6
 
 # Google News topic feeds — broader coverage alongside direct publisher RSS.
 # Same category labels so stories merge into existing tabs.
@@ -151,9 +150,16 @@ async def refresh_news() -> list[dict]:
     category_stories: dict[str, list[dict]] = {}
 
     async with httpx.AsyncClient(timeout=20.0) as client:
-        for category, url in feeds:
-            stories = await _fetch_feed(client, category, url)
-            category_stories.setdefault(category, []).extend(stories)
+        results = await asyncio.gather(
+            *[_fetch_feed(client, cat, url) for cat, url in feeds],
+            return_exceptions=True,
+        )
+
+    for (category, feed_url), result in zip(feeds, results):
+        if isinstance(result, Exception):
+            logger.warning("Feed fetch raised exception (%s): %s", feed_url, result)
+        else:
+            category_stories.setdefault(category, []).extend(result)
 
     # Deduplicate by URL within each category, cap at STORIES_PER_CATEGORY
     all_stories: list[dict] = []

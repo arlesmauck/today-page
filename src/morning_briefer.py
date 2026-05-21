@@ -5,9 +5,7 @@ import logging
 import re
 from datetime import datetime, timezone
 
-import litellm
-
-from src.config import AI_MODEL, AI_API_KEY, AI_API_BASE, AI_SUMMARY_ENABLED, DATA_DIR
+from src.config import AI_SUMMARY_ENABLED, DATA_DIR, _MAX_BRIEFING_CANDIDATES as _MAX_CANDIDATES
 from src.news import load_news
 
 logger = logging.getLogger("morning_briefer")
@@ -33,9 +31,6 @@ Do not start with "Today". Do not use bullet points.
 If two stories are genuinely connected, you may note that in a sentence. \
 Otherwise treat each on its own terms.
 Output only the sentences, nothing else."""
-
-# How many candidate stories to pass to the selection step
-_MAX_CANDIDATES = 15
 
 
 def _get_selection_prompt() -> str:
@@ -86,21 +81,9 @@ def _build_candidate_message(stories: list[dict]) -> str:
 
 async def _llm_call(system: str, user: str, max_tokens: int) -> str | None:
     """Single LLM call. Returns raw text or None on failure."""
-    kwargs: dict = {
-        "model": AI_MODEL,
-        "max_tokens": max_tokens,
-        "messages": [
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
-        ],
-    }
-    if AI_API_KEY:
-        kwargs["api_key"] = AI_API_KEY
-    if AI_API_BASE:
-        kwargs["api_base"] = AI_API_BASE
+    from src.llm import call_llm
     try:
-        response = await litellm.acompletion(**kwargs)
-        return response.choices[0].message.content.strip()
+        return await call_llm(system, user, max_tokens=max_tokens)
     except Exception as e:
         logger.error("LLM call failed: %s", e)
         return None

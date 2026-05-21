@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 
 import httpx
 
-from src.config import AI_MODEL, AI_API_KEY, AI_API_BASE, AI_SUMMARY_ENABLED, CONTEXT_MODEL, CONTEXT_ENABLED, CONTEXT_MAX_PER_REFRESH, DATA_DIR
+from src.config import AI_SUMMARY_ENABLED, CONTEXT_MODEL, CONTEXT_ENABLED, CONTEXT_MAX_PER_REFRESH, CONTEXT_API_KEY, MAX_ARTICLE_CHARS, DATA_DIR
 from src.news import NEWS_FILE
 
 
@@ -15,7 +15,6 @@ logger = logging.getLogger("ai_summarizer")
 
 CACHE_FILE = DATA_DIR / "news_ai_cache.json"
 CACHE_TTL_DAYS = 7
-MAX_ARTICLE_CHARS = 8000
 ARTICLE_FETCH_TIMEOUT = 15.0
 MAX_CONCURRENT_LLM_CALLS = 5
 
@@ -103,7 +102,7 @@ async def _fetch_article_text(
         resp.raise_for_status()
         text = trafilatura.extract(resp.text)
         if text:
-            logger.debug("Article fetched: %d chars from %s", url, len(text))
+            logger.debug("Article fetched: %d chars from %s", len(text), url)
             return text[:MAX_ARTICLE_CHARS], True
         logger.debug("No extractable content (likely paywalled): %s", url)
         return None, False
@@ -131,24 +130,13 @@ def _parse_llm_response(text: str) -> tuple[str, str] | None:
 
 async def _call_llm(headline: str, article_text: str) -> tuple[str, str] | None:
     """Call the configured LLM and parse the BRIEF/DETAIL response."""
-    import litellm
-
-    kwargs: dict = {
-        "model": AI_MODEL,
-        "max_tokens": 512,
-        "messages": [
-            {"role": "system", "content": _load_prompts()["summary_prompt"]},
-            {"role": "user", "content": f"Headline: {headline}\n\nArticle:\n{article_text}"},
-        ],
-    }
-    if AI_API_KEY:
-        kwargs["api_key"] = AI_API_KEY
-    if AI_API_BASE:
-        kwargs["api_base"] = AI_API_BASE
-
+    from src.llm import call_llm
     try:
-        response = await litellm.acompletion(**kwargs)
-        text = response.choices[0].message.content.strip()
+        text = await call_llm(
+            _load_prompts()["summary_prompt"],
+            f"Headline: {headline}\n\nArticle:\n{article_text}",
+            max_tokens=512,
+        )
         result = _parse_llm_response(text)
         if result:
             logger.debug("LLM summarized: %r", headline[:60])
@@ -160,24 +148,15 @@ async def _call_llm(headline: str, article_text: str) -> tuple[str, str] | None:
 
 async def _call_context_llm(headline: str) -> str | None:
     """Call CONTEXT_MODEL (e.g. Perplexity sonar) for web-searched background on a headline."""
-    import litellm
-
-    kwargs: dict = {
-        "model": CONTEXT_MODEL,
-        "max_tokens": 256,
-        "messages": [
-            {"role": "system", "content": _load_prompts()["context_prompt"]},
-            {"role": "user", "content": f"News headline: {headline}"},
-        ],
-    }
-    if AI_API_KEY:
-        kwargs["api_key"] = AI_API_KEY
-    if AI_API_BASE:
-        kwargs["api_base"] = AI_API_BASE
-
+    from src.llm import call_llm
     try:
-        response = await litellm.acompletion(**kwargs)
-        text = response.choices[0].message.content.strip()
+        text = await call_llm(
+            _load_prompts()["context_prompt"],
+            f"News headline: {headline}",
+            model=CONTEXT_MODEL,
+            max_tokens=256,
+            api_key=CONTEXT_API_KEY or None,
+        )
         logger.debug("Context LLM responded for %r", headline[:60])
         return text
     except Exception as e:
@@ -377,40 +356,21 @@ async def summarize_on_demand(url: str, headline: str, lede: str) -> dict:
         "Accept-Language": "en-US,en;q=0.5",
     }
     async with httpx.AsyncClient(timeout=ARTICLE_FETCH_TIMEOUT, headers=HEADERS) as client:
-        article_text, accessible = await _fetch_article_text(client, url)
+        story = {"url": url, "headline": headline, "lede": lede}
+        enriched = await _summarize_one(client, story, cache)
 
-    ai_source = "full_article" if article_text else "rss_lede"
-    input_text = article_text or lede or headline
+    _save_cache(cache)
 
-    llm_result = await _call_llm(headline, input_text)
-    if not llm_result:
-        logger.warning("On-demand LLM failed for %r", headline[:60])
-        return {"accessible": accessible, "ai_source": ai_source}
-
-    brief, detail = llm_result
-
-    context: str | None = None
-    if CONTEXT_ENABLED and ai_source == "full_article":
-        context = await _call_context_llm(headline)
-
-    if url:
-        cache[url] = {
-            "summary_brief": brief,
-            "summary_detail": detail,
-            "accessible": accessible,
-            "ai_source": ai_source,
-            "cached_at": datetime.now(timezone.utc).isoformat(),
-        }
-        if context:
-            cache[url]["summary_context"] = context
-        _save_cache(cache)
+    # Remap internal keys to the on-demand API shape
+    if not enriched.get("summary_brief"):
+        return {"accessible": enriched.get("accessible"), "ai_source": enriched.get("ai_source")}
 
     result = {
-        "brief": brief,
-        "detail": detail,
-        "accessible": accessible,
-        "ai_source": ai_source,
+        "brief": enriched["summary_brief"],
+        "detail": enriched.get("summary_detail", ""),
+        "accessible": enriched.get("accessible"),
+        "ai_source": enriched.get("ai_source"),
     }
-    if context:
-        result["context"] = context
+    if enriched.get("summary_context"):
+        result["context"] = enriched["summary_context"]
     return result

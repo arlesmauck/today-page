@@ -2,14 +2,14 @@
 from pathlib import Path
 
 from fastapi import FastAPI, Query
-from fastapi.requests import Request
+from fastapi import Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from src.config import BASE_DIR, DATA_DIR, AI_SUMMARY_ENABLED, CONTEXT_ENABLED, NEWS_CURATION_ENABLED
 from src.fetcher import load_weather, refresh_weather
 from src.calendar import load_calendar
-from src.news import load_news
+from src.news import load_news, news_categories
 
 app = FastAPI(title="Today Page", version="1.0.0")
 
@@ -155,8 +155,13 @@ async def summarize_story(
 async def health():
     """Health check endpoint."""
     weather = load_weather()
+    calendar = load_calendar()
+    news = load_news()
     return {
         "status": "ok",
         "weather_cached": weather is not None,
+        "calendar_cached": calendar is not None,
+        "news_cached": len(news) > 0,
+        "news_count": len(news),
         "fetched_at": weather.get("fetched_at") if weather else None,
     }

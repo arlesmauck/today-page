@@ -6,10 +6,10 @@ import re
 from datetime import datetime, timezone
 
 from src.config import (
-    AI_MODEL, AI_API_KEY, AI_API_BASE, NEWS_CURATION_ENABLED,
-    REFRESH_INTERVAL, DATA_DIR, get_category_quality,
+    NEWS_CURATION_ENABLED, REFRESH_INTERVAL, DATA_DIR,
+    STORIES_PER_CATEGORY, get_category_quality,
 )
-from src.news import NEWS_FILE, STORIES_PER_CATEGORY, load_news
+from src.news import NEWS_FILE, load_news
 
 logger = logging.getLogger("news_curator")
 
@@ -130,24 +130,13 @@ def _parse_llm_response(text: str, id_to_story: dict[int, dict]) -> dict[str, st
 
 async def _call_curation_llm(user_message: str) -> str | None:
     """Call AI_MODEL with the curation prompt. Returns raw text or None on failure."""
-    import litellm
-
-    kwargs: dict = {
-        "model": AI_MODEL,
-        "max_tokens": 1024,
-        "messages": [
-            {"role": "system", "content": _get_curation_prompt()},
-            {"role": "user", "content": user_message},
-        ],
-    }
-    if AI_API_KEY:
-        kwargs["api_key"] = AI_API_KEY
-    if AI_API_BASE:
-        kwargs["api_base"] = AI_API_BASE
-
+    from src.llm import call_llm
     try:
-        response = await litellm.acompletion(**kwargs)
-        return response.choices[0].message.content.strip()
+        return await call_llm(
+            _get_curation_prompt(),
+            user_message,
+            max_tokens=1024,
+        )
     except Exception as e:
         logger.error("Curation LLM call failed: %s", e)
         return None

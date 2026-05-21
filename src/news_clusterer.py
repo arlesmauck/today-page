@@ -5,15 +5,12 @@ import logging
 import re
 from datetime import datetime, timezone
 
-import litellm
-
-from src.config import AI_MODEL, AI_API_KEY, AI_API_BASE, AI_SUMMARY_ENABLED, DATA_DIR
+from src.config import AI_SUMMARY_ENABLED, DATA_DIR, CLUSTER_THRESHOLD
 from src.news import NEWS_FILE, load_news
 
 logger = logging.getLogger("news_clusterer")
 
 CLUSTER_CACHE_FILE = DATA_DIR / "cluster_cache.json"
-CLUSTER_THRESHOLD = 0.3  # Jaccard similarity threshold
 
 SYNTHESIS_SYSTEM_PROMPT = (
     "Multiple news sources covered the same story. "
@@ -132,22 +129,13 @@ async def _synthesize_cluster(cluster: list[dict], cache: dict) -> dict:
         lines.append("")
     user_message = "\n".join(lines).strip()
 
-    kwargs: dict = {
-        "model": AI_MODEL,
-        "max_tokens": 256,
-        "messages": [
-            {"role": "system", "content": SYNTHESIS_SYSTEM_PROMPT},
-            {"role": "user", "content": user_message},
-        ],
-    }
-    if AI_API_KEY:
-        kwargs["api_key"] = AI_API_KEY
-    if AI_API_BASE:
-        kwargs["api_base"] = AI_API_BASE
-
     try:
-        response = await litellm.acompletion(**kwargs)
-        synthesized_lede = response.choices[0].message.content.strip()
+        from src.llm import call_llm
+        synthesized_lede = await call_llm(
+            SYNTHESIS_SYSTEM_PROMPT,
+            user_message,
+            max_tokens=256,
+        )
     except Exception as e:
         logger.error("Synthesis LLM call failed for cluster %r: %s", rep.get("headline", "")[:60], e)
         return rep
