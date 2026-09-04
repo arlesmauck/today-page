@@ -45,4 +45,9 @@ async def call_llm(
         kwargs["api_base"] = effective_base
 
     response = await litellm.acompletion(**kwargs)
-    return response.choices[0].message.content.strip()
+    choice = response.choices[0]
+    if choice.finish_reason in ("length", "max_tokens"):
+        raise ValueError(
+            f"LLM response truncated at max_tokens={max_tokens} (finish_reason={choice.finish_reason})"
+        )
+    return choice.message.content.strip()

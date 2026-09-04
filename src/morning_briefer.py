@@ -12,6 +12,9 @@ logger = logging.getLogger("morning_briefer")
 
 BRIEFING_FILE = DATA_DIR / "morning_briefing.json"
 
+# Bumped when the briefing format changes so stale entries regenerate
+CACHE_VERSION = 2
+
 # Step 1: select the most significant stories from the full pool
 DEFAULT_SELECTION_PROMPT = """\
 You are an editor choosing which stories deserve attention in a morning briefing.
@@ -143,7 +146,9 @@ async def generate_briefing() -> str | None:
     current_hash = _input_hash(candidates)
 
     cache = _load_cache()
-    if cache.get("input_hash") == current_hash and cache.get("briefing"):
+    if (cache.get("version") == CACHE_VERSION
+            and cache.get("input_hash") == current_hash
+            and cache.get("briefing")):
         logger.debug("Morning briefing cache hit — skipping LLM calls")
         return cache["briefing"]
 
@@ -164,11 +169,12 @@ async def generate_briefing() -> str | None:
         lines.append(line)
     user_message = "\n\n".join(lines)
 
-    briefing = await _llm_call(_get_briefing_prompt(), user_message, max_tokens=300)
+    briefing = await _llm_call(_get_briefing_prompt(), user_message, max_tokens=700)
     if not briefing:
         return None
 
     BRIEFING_FILE.write_text(json.dumps({
+        "version": CACHE_VERSION,
         "input_hash": current_hash,
         "briefing": briefing,
         "selected_headlines": [s.get("headline", "") for s in selected],
