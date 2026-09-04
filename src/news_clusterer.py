@@ -5,7 +5,8 @@ import logging
 import re
 from datetime import datetime, timezone
 
-from src.config import AI_SUMMARY_ENABLED, DATA_DIR, CLUSTER_THRESHOLD
+from src.config import AI_SUMMARY_ENABLED, DATA_DIR
+from src.app_settings import get_cluster_threshold
 from src.news import NEWS_FILE, load_news
 
 logger = logging.getLogger("news_clusterer")
@@ -77,6 +78,7 @@ def _detect_clusters(stories: list[dict]) -> list[list[dict]]:
     """
     assigned = [False] * len(stories)
     clusters: list[list[dict]] = []
+    threshold = get_cluster_threshold()
 
     for i, story in enumerate(stories):
         if assigned[i]:
@@ -86,7 +88,7 @@ def _detect_clusters(stories: list[dict]) -> list[list[dict]]:
         for j in range(i + 1, len(stories)):
             if assigned[j]:
                 continue
-            if _jaccard(story["headline"], stories[j]["headline"]) >= CLUSTER_THRESHOLD:
+            if _jaccard(story["headline"], stories[j]["headline"]) >= threshold:
                 cluster.append(stories[j])
                 assigned[j] = True
         clusters.append(cluster)

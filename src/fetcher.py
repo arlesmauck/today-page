@@ -5,7 +5,10 @@ from pathlib import Path
 
 import httpx
 
-from src.config import DATA_DIR, LATITUDE, LONGITUDE, LOCATION_NAME, TIMEZONE_NAME
+from src.config import DATA_DIR
+from src.app_settings import (
+    get_latitude, get_location_name, get_longitude, get_timezone_name,
+)
 
 
 WEATHER_FILE = DATA_DIR / "weather.json"
@@ -48,15 +51,17 @@ def _wmo_desc(code: int | None) -> str:
 
 async def fetch_weather() -> dict:
     """Fetch current conditions and forecast from Open-Meteo."""
+    latitude = get_latitude()
+    longitude = get_longitude()
     params = {
-        "latitude": LATITUDE,
-        "longitude": LONGITUDE,
+        "latitude": latitude,
+        "longitude": longitude,
         "current": "temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code",
         "hourly": "temperature_2m,precipitation_probability,weather_code",
         "daily": "temperature_2m_max,weather_code",
         "wind_speed_unit": "mph",
         "temperature_unit": "fahrenheit",
-        "timezone": TIMEZONE_NAME,
+        "timezone": get_timezone_name(),
         "forecast_days": 7,
     }
 
@@ -104,9 +109,9 @@ async def fetch_weather() -> dict:
         })
 
     return {
-        "location": LOCATION_NAME,
-        "lat": LATITUDE,
-        "lon": LONGITUDE,
+        "location": get_location_name(),
+        "lat": latitude,
+        "lon": longitude,
         "fetched_at": datetime.now(timezone.utc).isoformat(),
         "current": current_out,
         "daily": daily_forecast,

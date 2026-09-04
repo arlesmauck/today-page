@@ -7,7 +7,8 @@ from datetime import datetime, timedelta, timezone
 
 import httpx
 
-from src.config import AI_SUMMARY_ENABLED, CONTEXT_MODEL, CONTEXT_ENABLED, CONTEXT_MAX_PER_REFRESH, CONTEXT_API_KEY, MAX_ARTICLE_CHARS, DATA_DIR
+from src.config import AI_SUMMARY_ENABLED, CONTEXT_MODEL, CONTEXT_ENABLED, CONTEXT_API_KEY, MAX_ARTICLE_CHARS, DATA_DIR
+from src.app_settings import get_context_max_per_refresh
 from src.news import NEWS_FILE
 
 
@@ -256,9 +257,10 @@ async def enrich_stories_with_ai(stories: list[dict]) -> list[dict]:
     cache = _load_cache()
     cache_hits = sum(1 for s in stories if s.get("url") in cache)
     new_count = len(stories) - cache_hits
+    context_max = get_context_max_per_refresh()
     context_note = (
-        f", up to {CONTEXT_MAX_PER_REFRESH} context calls (model: {CONTEXT_MODEL})"
-        if CONTEXT_ENABLED and new_count > 0 and CONTEXT_MAX_PER_REFRESH > 0
+        f", up to {context_max} context calls (model: {CONTEXT_MODEL})"
+        if CONTEXT_ENABLED and new_count > 0 and context_max > 0
         else f", context calls: unlimited (model: {CONTEXT_MODEL})"
         if CONTEXT_ENABLED and new_count > 0
         else ""
@@ -269,9 +271,9 @@ async def enrich_stories_with_ai(stories: list[dict]) -> list[dict]:
     )
 
     # Shared context budget — limits expensive context LLM calls per refresh cycle.
-    # None = no cap. CONTEXT_MAX_PER_REFRESH=0 means no cap (unlimited).
+    # None = no cap. A cap of 0 means no cap (unlimited).
     context_budget: list[int] | None = (
-        [CONTEXT_MAX_PER_REFRESH] if CONTEXT_ENABLED and CONTEXT_MAX_PER_REFRESH > 0 else None
+        [context_max] if CONTEXT_ENABLED and context_max > 0 else None
     )
 
     semaphore = asyncio.Semaphore(MAX_CONCURRENT_LLM_CALLS)
@@ -309,7 +311,7 @@ async def enrich_stories_with_ai(stories: list[dict]) -> list[dict]:
     with_ai = sum(1 for s in enriched_stories if s.get("summary_brief"))
     with_context = sum(1 for s in enriched_stories if s.get("summary_context"))
     context_calls_made = (
-        (CONTEXT_MAX_PER_REFRESH - context_budget[0]) if context_budget is not None else
+        (context_max - context_budget[0]) if context_budget is not None else
         with_context - sum(1 for s in stories if s.get("url") in cache and cache[s.get("url", "")].get("summary_context"))
     )
     context_log = f", {with_context} with background context ({context_calls_made} new calls)" if CONTEXT_ENABLED else ""

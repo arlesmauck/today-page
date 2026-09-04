@@ -401,6 +401,112 @@
             margin-top: 0.75rem;
             color: #888;
         }
+        .settings-section {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: #b0a898;
+            border-top: 1px solid #e8e4dc;
+            padding-top: 1.25rem;
+            margin: 2rem 0 1rem;
+        }
+        .settings-field input {
+            width: 100%;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+            color: #2d2d2d;
+            background: #fff;
+            border: 1px solid #e0dcd4;
+            border-radius: 4px;
+            padding: 0.55rem 0.75rem;
+            box-sizing: border-box;
+        }
+        .settings-field input:focus { outline: 1px solid #b0a898; }
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 0 1rem;
+        }
+        .dyn-row {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.6rem;
+            align-items: center;
+        }
+        .dyn-row .dyn-input {
+            flex: 1;
+            min-width: 0;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+            color: #2d2d2d;
+            background: #fff;
+            border: 1px solid #e0dcd4;
+            border-radius: 4px;
+            padding: 0.55rem 0.75rem;
+        }
+        .dyn-row .dyn-input:focus { outline: 1px solid #b0a898; }
+        .dyn-row .dyn-cat { flex: 0 0 160px; }
+        .dyn-row .dyn-remove {
+            flex: none;
+            border: none;
+            background: none;
+            color: #c0b8a8;
+            font-size: 0.9rem;
+            cursor: pointer;
+            padding: 0.25rem;
+            line-height: 1;
+        }
+        .dyn-row .dyn-remove:hover { color: #a05a4a; }
+        .add-row-btn {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.78rem;
+            color: #8b7355;
+            background: none;
+            border: 1px dashed #d0ccc4;
+            border-radius: 4px;
+            padding: 0.4rem 0.8rem;
+            cursor: pointer;
+        }
+        .add-row-btn:hover { background: #ece9e3; }
+        .settings-hint {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.72rem;
+            color: #b0a898;
+            margin-top: 0.4rem;
+            line-height: 1.5;
+        }
+        .settings-check {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .settings-check label {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.82rem;
+            color: #4a4540;
+        }
+        .quality-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.4rem;
+        }
+        .quality-row .quality-name {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.82rem;
+            color: #4a4540;
+        }
+        .quality-row select {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.8rem;
+            color: #2d2d2d;
+            border: 1px solid #e0dcd4;
+            border-radius: 4px;
+            padding: 0.3rem 0.5rem;
+            background: #fff;
+        }
         .story-reason {
             font-size: 0.72rem;
             color: #b0a898;
@@ -561,16 +667,86 @@
         <footer>
             <p>Updated at {{ updated_at }}</p>
             <p class="tagline">"No algorithms. No clickbait. Just what matters."</p>
-            {% if ai_summary_enabled %}
-            <button class="settings-btn" onclick="openSettings()" title="AI prompt settings">⚙</button>
-            {% endif %}
+            <button class="settings-btn" onclick="openSettings()" title="Settings">⚙</button>
         </footer>
     </div>
 
     <!-- Settings overlay -->
     <div class="settings-backdrop" id="settings-backdrop">
         <div class="settings-panel">
-            <h3>AI Prompt Settings</h3>
+            <h3>Settings</h3>
+
+            <div class="settings-field">
+                <label>Your name — used in the greeting</label>
+                <input type="text" id="set-user-name">
+            </div>
+            <div class="settings-field">
+                <label>Page title</label>
+                <input type="text" id="set-page-title">
+            </div>
+
+            <div class="settings-section">Location</div>
+            <div class="settings-field">
+                <label>Location name — shown on the page and used for the Local news tab</label>
+                <input type="text" id="set-location-name">
+            </div>
+            <div class="settings-grid">
+                <div class="settings-field">
+                    <label>Latitude (−90 to 90)</label>
+                    <input type="number" id="set-latitude" step="any" min="-90" max="90">
+                </div>
+                <div class="settings-field">
+                    <label>Longitude (−180 to 180)</label>
+                    <input type="number" id="set-longitude" step="any" min="-180" max="180">
+                </div>
+                <div class="settings-field">
+                    <label>Timezone (IANA name)</label>
+                    <input type="text" id="set-timezone" placeholder="America/Denver">
+                </div>
+            </div>
+
+            <div class="settings-section">Calendars</div>
+            <div id="calendar-rows"></div>
+            <button type="button" class="add-row-btn" onclick="addCalendarRow()">+ Add calendar</button>
+            <p class="settings-hint">Secret iCal (.ics) addresses. Saved URLs are never sent back to the browser —
+            they appear masked here, and typing a new URL replaces the saved one. Leave a masked row untouched to keep it.</p>
+
+            <div class="settings-section">News feeds</div>
+            <div id="feed-rows"></div>
+            <button type="button" class="add-row-btn" onclick="addFeedRow()">+ Add feed</button>
+            <p class="settings-hint">Each feed fills a tab; use the same category name to merge feeds into one tab.
+            A &ldquo;Local&rdquo; tab is generated automatically from your location name.</p>
+
+            <div class="settings-section">Curation &amp; display</div>
+            <div class="settings-check">
+                <input type="checkbox" id="set-curation-enabled">
+                <label for="set-curation-enabled">AI news curation — pick the most newsworthy stories per category</label>
+            </div>
+            <div class="settings-field">
+                <label>Per-category strictness</label>
+                <div id="quality-rows"></div>
+                <p class="settings-hint">strict — only genuinely significant stories pass (a category may show none).
+                relaxed — always pick the 2–4 best available.</p>
+            </div>
+            <div class="settings-grid">
+                <div class="settings-field">
+                    <label>Stories per category</label>
+                    <input type="number" id="set-stories-per" min="1" max="20">
+                </div>
+                <div class="settings-field">
+                    <label>Cluster threshold (0–1)</label>
+                    <input type="number" id="set-cluster-threshold" step="0.05" min="0" max="1">
+                </div>
+                {% if context_enabled %}
+                <div class="settings-field">
+                    <label>Background context calls per refresh (0 = unlimited)</label>
+                    <input type="number" id="set-context-max" min="0" max="100">
+                </div>
+                {% endif %}
+            </div>
+
+            {% if ai_summary_enabled %}
+            <div class="settings-section">AI prompts</div>
             <div class="settings-field">
                 <label>Summary prompt — used when generating Brief &amp; Detail</label>
                 <textarea id="summary-prompt" rows="12"></textarea>
@@ -591,9 +767,12 @@
                 <label>Morning briefing prompt — used to write the opening paragraph</label>
                 <textarea id="briefing-prompt" rows="6"></textarea>
             </div>
+            {% endif %}
+
             <div class="settings-actions">
-                <button class="btn-primary" onclick="savePrompts()">Save</button>
-                <button onclick="resetPrompts()">Reset to default</button>
+                <button class="btn-primary" onclick="saveAllSettings()">Save</button>
+                <button onclick="resetToDefaults()">Reset to default</button>
+                <button onclick="revertToEnv()">Revert to .env</button>
                 <button onclick="closeSettings()">Cancel</button>
             </div>
             <p id="settings-status"></p>
@@ -686,26 +865,196 @@
         }
 
         // ── Settings panel ────────────────────────────────────────────────────
-        let _defaults = {};
+        let _defaults = {};       // hardcoded AI prompt defaults
+        let _settingsData = null; // last GET /api/config/settings response
+
+        function setIfPresent(id, value) {
+            const el = document.getElementById(id);
+            if (el) el.value = value ?? '';
+        }
+
+        function fieldVal(id) {
+            const el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        }
+
+        // ── Dynamic rows (calendars, feeds, quality gates) ───────────────────
+
+        function makeRemoveButton(row) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'dyn-remove';
+            btn.textContent = '✕';
+            btn.title = 'Remove';
+            btn.onclick = () => row.remove();
+            return btn;
+        }
+
+        function calendarRow(label, maskedUrl, isNew) {
+            const row = document.createElement('div');
+            row.className = 'dyn-row';
+            const labelInput = document.createElement('input');
+            labelInput.className = 'dyn-input dyn-cat';
+            labelInput.placeholder = 'Name (e.g. Personal)';
+            labelInput.value = label || '';
+            const urlInput = document.createElement('input');
+            urlInput.className = 'dyn-input';
+            urlInput.type = 'text';
+            urlInput.placeholder = maskedUrl || 'https://…/basic.ics';
+            // The mask seen at load time — sent back unchanged if the user types nothing
+            urlInput.dataset.existing = isNew ? '' : (maskedUrl || '');
+            row.append(labelInput, urlInput, makeRemoveButton(row));
+            return row;
+        }
+
+        function renderCalendarRows(calendars) {
+            const wrap = document.getElementById('calendar-rows');
+            wrap.innerHTML = '';
+            calendars.forEach(c => wrap.appendChild(calendarRow(c.label, c.url, false)));
+        }
+
+        function addCalendarRow() {
+            document.getElementById('calendar-rows').appendChild(calendarRow('', '', true));
+        }
+
+        function collectCalendars() {
+            const out = [];
+            document.querySelectorAll('#calendar-rows .dyn-row').forEach(row => {
+                const label = row.children[0].value.trim();
+                const urlInput = row.children[1];
+                // Untouched row → send the mask back so the server keeps the saved URL
+                const url = urlInput.value.trim() || urlInput.dataset.existing || '';
+                if (!label && !url) return;
+                out.push({label: label, url: url});
+            });
+            return out;
+        }
+
+        function feedRow(category, url) {
+            const row = document.createElement('div');
+            row.className = 'dyn-row';
+            const catInput = document.createElement('input');
+            catInput.className = 'dyn-input dyn-cat';
+            catInput.placeholder = 'Category (tab)';
+            catInput.value = category || '';
+            catInput.setAttribute('list', 'feed-category-list');
+            const urlInput = document.createElement('input');
+            urlInput.className = 'dyn-input';
+            urlInput.type = 'url';
+            urlInput.placeholder = 'https://example.com/rss.xml';
+            urlInput.value = url || '';
+            row.append(catInput, urlInput, makeRemoveButton(row));
+            return row;
+        }
+
+        function renderFeedRows(feeds, categories) {
+            const wrap = document.getElementById('feed-rows');
+            wrap.innerHTML = '';
+            let datalist = document.getElementById('feed-category-list');
+            if (!datalist) {
+                datalist = document.createElement('datalist');
+                datalist.id = 'feed-category-list';
+                document.body.appendChild(datalist);
+            }
+            datalist.innerHTML = '';
+            categories.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                datalist.appendChild(opt);
+            });
+            feeds.forEach(f => wrap.appendChild(feedRow(f.category, f.url)));
+        }
+
+        function addFeedRow() {
+            document.getElementById('feed-rows').appendChild(feedRow('', ''));
+        }
+
+        function collectFeeds() {
+            const out = [];
+            document.querySelectorAll('#feed-rows .dyn-row').forEach(row => {
+                const category = row.children[0].value.trim();
+                const url = row.children[1].value.trim();
+                if (!category && !url) return;
+                out.push({category: category, label: '', url: url});
+            });
+            return out;
+        }
+
+        function renderQualityRows(gates, categories) {
+            const wrap = document.getElementById('quality-rows');
+            wrap.innerHTML = '';
+            categories.forEach(cat => {
+                const row = document.createElement('div');
+                row.className = 'quality-row';
+                const name = document.createElement('span');
+                name.className = 'quality-name';
+                name.textContent = cat;
+                const select = document.createElement('select');
+                select.dataset.cat = cat;
+                [['relaxed', 'Relaxed'], ['strict', 'Strict']].forEach(([v, t]) => {
+                    const opt = document.createElement('option');
+                    opt.value = v;
+                    opt.textContent = t;
+                    select.appendChild(opt);
+                });
+                select.value = gates[cat] === 'strict' ? 'strict' : 'relaxed';
+                row.append(name, select);
+                wrap.appendChild(row);
+            });
+        }
+
+        function collectQualityGates() {
+            const out = {};
+            document.querySelectorAll('#quality-rows select').forEach(sel => {
+                out[sel.dataset.cat] = sel.value;
+            });
+            return out;
+        }
+
+        // ── Load / save / reset ──────────────────────────────────────────────
 
         async function openSettings() {
             const status = document.getElementById('settings-status');
             status.textContent = 'Loading…';
             document.getElementById('settings-backdrop').classList.add('open');
             try {
-                const resp = await fetch('/api/config/prompts');
-                const data = await resp.json();
-                _defaults = data.defaults || {};
-                document.getElementById('summary-prompt').value = data.summary_prompt || '';
-                const ctxEl = document.getElementById('context-prompt');
-                if (ctxEl) ctxEl.value = data.context_prompt || '';
-                const curEl = document.getElementById('curation-prompt');
-                if (curEl) curEl.value = data.curation_prompt || '';
-                const brfEl = document.getElementById('briefing-prompt');
-                if (brfEl) brfEl.value = data.briefing_prompt || '';
+                const [promptsResp, settingsResp] = await Promise.all([
+                    fetch('/api/config/prompts'),
+                    fetch('/api/config/settings'),
+                ]);
+                if (!settingsResp.ok) throw new Error('settings load failed');
+                const prompts = await promptsResp.json();
+                const settings = await settingsResp.json();
+                _defaults = prompts.defaults || {};
+                _settingsData = settings;
+
+                setIfPresent('summary-prompt', prompts.summary_prompt);
+                setIfPresent('context-prompt', prompts.context_prompt);
+                setIfPresent('curation-prompt', prompts.curation_prompt);
+                setIfPresent('briefing-prompt', prompts.briefing_prompt);
+
+                setIfPresent('set-user-name', settings.user_name);
+                setIfPresent('set-page-title', settings.page_title);
+                setIfPresent('set-location-name', settings.location_name);
+                setIfPresent('set-latitude', settings.latitude);
+                setIfPresent('set-longitude', settings.longitude);
+                setIfPresent('set-timezone', settings.timezone);
+
+                renderCalendarRows(settings.calendars || []);
+                renderFeedRows(settings.feeds || [], settings.feed_categories || []);
+
+                document.getElementById('set-curation-enabled').checked = !!settings.news_curation_enabled;
+                renderQualityRows(settings.quality_gates || {}, settings.feed_categories || []);
+
+                setIfPresent('set-stories-per', settings.stories_per_category);
+                setIfPresent('set-cluster-threshold', settings.cluster_threshold);
+                if (document.getElementById('set-context-max')) {
+                    setIfPresent('set-context-max', settings.context_max_per_refresh);
+                }
+
                 status.textContent = '';
             } catch (e) {
-                status.textContent = 'Failed to load prompts.';
+                status.textContent = 'Failed to load settings.';
             }
         }
 
@@ -714,43 +1063,104 @@
             document.getElementById('settings-status').textContent = '';
         }
 
-        function resetPrompts() {
-            document.getElementById('summary-prompt').value = _defaults.summary_prompt || '';
-            const ctxEl = document.getElementById('context-prompt');
-            if (ctxEl) ctxEl.value = _defaults.context_prompt || '';
-            const curEl = document.getElementById('curation-prompt');
-            if (curEl) curEl.value = _defaults.curation_prompt || '';
-            const brfEl = document.getElementById('briefing-prompt');
-            if (brfEl) brfEl.value = _defaults.briefing_prompt || '';
+        function resetToDefaults() {
+            // AI prompts → hardcoded defaults
+            setIfPresent('summary-prompt', _defaults.summary_prompt);
+            setIfPresent('context-prompt', _defaults.context_prompt);
+            setIfPresent('curation-prompt', _defaults.curation_prompt);
+            setIfPresent('briefing-prompt', _defaults.briefing_prompt);
+
+            // Everything else → env-var defaults
+            const d = (_settingsData && _settingsData.env_defaults) || {};
+            setIfPresent('set-user-name', d.user_name);
+            setIfPresent('set-page-title', d.page_title);
+            setIfPresent('set-location-name', d.location_name);
+            setIfPresent('set-latitude', d.latitude);
+            setIfPresent('set-longitude', d.longitude);
+            setIfPresent('set-timezone', d.timezone);
+            document.getElementById('set-curation-enabled').checked = !!d.news_curation_enabled;
+            setIfPresent('set-stories-per', d.stories_per_category);
+            setIfPresent('set-cluster-threshold', d.cluster_threshold);
+            if (document.getElementById('set-context-max')) {
+                setIfPresent('set-context-max', d.context_max_per_refresh);
+            }
             document.getElementById('settings-status').textContent = 'Defaults restored — click Save to apply.';
         }
 
-        async function savePrompts() {
+        async function revertToEnv() {
             const status = document.getElementById('settings-status');
-            status.textContent = 'Saving…';
-            const body = {
-                summary_prompt: document.getElementById('summary-prompt').value.trim(),
-            };
-            const ctxEl = document.getElementById('context-prompt');
-            if (ctxEl) body.context_prompt = ctxEl.value.trim();
-            const curEl = document.getElementById('curation-prompt');
-            if (curEl) body.curation_prompt = curEl.value.trim();
-            const brfEl = document.getElementById('briefing-prompt');
-            if (brfEl) body.briefing_prompt = brfEl.value.trim();
-
+            status.textContent = 'Reverting…';
             try {
-                const resp = await fetch('/api/config/prompts', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(body),
-                });
+                const resp = await fetch('/api/config/settings', {method: 'DELETE'});
                 if (!resp.ok) {
-                    const err = await resp.json();
-                    status.textContent = err.error || 'Save failed.';
+                    const err = await resp.json().catch(() => ({}));
+                    status.textContent = err.error || 'Revert failed.';
                     return;
                 }
-                status.textContent = 'Saved. New prompts apply to the next story click.';
-                setTimeout(closeSettings, 1500);
+                status.textContent = 'Reverted to .env defaults.';
+                setTimeout(() => location.reload(), 1200);
+            } catch (e) {
+                status.textContent = 'Revert failed — server unreachable.';
+            }
+        }
+
+        async function saveAllSettings() {
+            const status = document.getElementById('settings-status');
+            status.textContent = 'Saving…';
+
+            const body = {
+                user_name: fieldVal('set-user-name'),
+                page_title: fieldVal('set-page-title'),
+                location_name: fieldVal('set-location-name'),
+                latitude: fieldVal('set-latitude'),
+                longitude: fieldVal('set-longitude'),
+                timezone: fieldVal('set-timezone'),
+                calendars: collectCalendars(),
+                feeds: collectFeeds(),
+                news_curation_enabled: document.getElementById('set-curation-enabled').checked,
+                quality_gates: collectQualityGates(),
+                stories_per_category: fieldVal('set-stories-per'),
+                cluster_threshold: fieldVal('set-cluster-threshold'),
+            };
+            const ctxEl = document.getElementById('set-context-max');
+            if (ctxEl) body.context_max_per_refresh = ctxEl.value.trim();
+
+            if (!body.user_name || !body.page_title || !body.location_name || !body.timezone) {
+                status.textContent = 'Name, page title, location, and timezone are required.';
+                return;
+            }
+
+            const tasks = [fetch('/api/config/settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(body),
+            })];
+            if (document.getElementById('summary-prompt')) {
+                const promptBody = {summary_prompt: fieldVal('summary-prompt')};
+                const ctxPrompt = document.getElementById('context-prompt');
+                if (ctxPrompt) promptBody.context_prompt = ctxPrompt.value.trim();
+                const curPrompt = document.getElementById('curation-prompt');
+                if (curPrompt) promptBody.curation_prompt = curPrompt.value.trim();
+                const brfPrompt = document.getElementById('briefing-prompt');
+                if (brfPrompt) promptBody.briefing_prompt = brfPrompt.value.trim();
+                tasks.push(fetch('/api/config/prompts', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(promptBody),
+                }));
+            }
+
+            try {
+                const responses = await Promise.all(tasks);
+                for (const resp of responses) {
+                    if (!resp.ok) {
+                        const err = await resp.json().catch(() => ({}));
+                        status.textContent = err.error || 'Save failed.';
+                        return;
+                    }
+                }
+                status.textContent = 'Saved — data refreshes in the background.';
+                setTimeout(() => location.reload(), 1200);
             } catch (e) {
                 status.textContent = 'Save failed — server unreachable.';
             }

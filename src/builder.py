@@ -6,7 +6,11 @@ from pathlib import Path
 
 import jinja2
 
-from src.config import BASE_DIR, DATA_DIR, LOCATION_NAME, TIMEZONE, REFRESH_INTERVAL, USER_NAME, PAGE_TITLE, AI_SUMMARY_ENABLED, CONTEXT_ENABLED, NEWS_CURATION_ENABLED
+from src.config import BASE_DIR, REFRESH_INTERVAL, AI_SUMMARY_ENABLED, CONTEXT_ENABLED
+from src.app_settings import (
+    get_location_name, get_news_curation_enabled, get_page_title,
+    get_timezone, get_user_name,
+)
 from src.fetcher import load_weather
 from src.calendar import load_calendar
 from src.news import load_news, news_categories
@@ -20,7 +24,7 @@ def format_time(dt_str: str) -> str:
     """Format an ISO datetime string as HH:MM AM/PM in the configured timezone."""
     try:
         dt = datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
-        local = dt.astimezone(TIMEZONE)
+        local = dt.astimezone(get_timezone())
         return local.strftime("%I:%M %p").lstrip("0")
     except Exception:
         return ""
@@ -38,7 +42,7 @@ def _time_of_day_greeting(now) -> str:
 
 def build_page() -> str:
     """Fetch data and render the HTML page."""
-    now = datetime.now(TIMEZONE)
+    now = datetime.now(get_timezone())
 
     # Load weather
     weather = load_weather()
@@ -121,7 +125,8 @@ def build_page() -> str:
 
     # Load unselected story count for curation badge
     unselected_count = 0
-    if NEWS_CURATION_ENABLED:
+    curation_enabled = get_news_curation_enabled()
+    if curation_enabled:
         from src.news_curator import UNSELECTED_STORIES_FILE
         if UNSELECTED_STORIES_FILE.exists():
             try:
@@ -144,10 +149,10 @@ def build_page() -> str:
     template = env.get_template("001.html")
 
     html = template.render(
-        title=PAGE_TITLE,
+        title=get_page_title(),
         date_str=now.strftime("%A, %B %d, %Y"),
-        greeting=f"{_time_of_day_greeting(now)}, {USER_NAME}",
-        location=LOCATION_NAME,
+        greeting=f"{_time_of_day_greeting(now)}, {get_user_name()}",
+        location=get_location_name(),
         weather={
             "temp_f": current.get("temperature_f") or 62,
             "description": current.get("description") or "Mostly sunny",
@@ -165,7 +170,7 @@ def build_page() -> str:
         refresh_interval_ms=REFRESH_INTERVAL * 1000,
         ai_summary_enabled=AI_SUMMARY_ENABLED,
         context_enabled=CONTEXT_ENABLED,
-        curation_enabled=NEWS_CURATION_ENABLED,
+        curation_enabled=curation_enabled,
         unselected_count=unselected_count,
         morning_briefing=morning_briefing,
     )

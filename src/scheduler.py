@@ -2,7 +2,8 @@
 import asyncio
 import logging
 
-from src.config import REFRESH_INTERVAL, NEWS_CURATION_ENABLED, AI_SUMMARY_ENABLED
+from src.config import REFRESH_INTERVAL, AI_SUMMARY_ENABLED
+from src.app_settings import get_news_curation_enabled
 from src.fetcher import refresh_weather
 from src.calendar import refresh_calendar
 from src.news import refresh_news
@@ -46,7 +47,7 @@ async def _run_once(label: str = "") -> None:
     except Exception as e:
         logger.error("%snews fetch failed: %s", prefix, e)
 
-    if NEWS_CURATION_ENABLED:
+    if get_news_curation_enabled():
         try:
             from src.news_curator import curate_news
             unselected = await curate_news()
@@ -76,6 +77,11 @@ async def _run_once(label: str = "") -> None:
         logger.info("%spage rebuilt", prefix)
     except Exception as e:
         logger.error("%spage build failed: %s", prefix, e)
+
+
+async def refresh_now(label: str = "Manual") -> None:
+    """Run one full refresh cycle — used by the settings API after changes."""
+    await _run_once(label=label)
 
 
 async def run_scheduler():

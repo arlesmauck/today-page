@@ -11,7 +11,8 @@ import feedparser
 import httpx
 from urllib.parse import quote
 
-from src.config import DATA_DIR, LOCATION_NAME, STORIES_PER_CATEGORY
+from src.config import DATA_DIR
+from src.app_settings import get_feeds, get_location_name, get_stories_per_category
 
 logger = logging.getLogger("news")
 
@@ -60,22 +61,44 @@ def _strip_html(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
-def _load_feeds() -> list[tuple[str, str]]:
+def _auto_local_url(location: str) -> str:
+    """Google News search feed for a location name — used for the Local tab."""
+    encoded = quote(location)
+    return f"https://news.google.com/rss/search?q={encoded}&hl=en-US&gl=US&ceid=US:en"
+
+
+def _direct_feeds() -> list[tuple[str, str]]:
     """
-    Return [(category, url), ...] for all feeds.
-    Default feeds ship with the app; env vars override individual categories
-    or add new ones.
+    Direct publisher feeds as [(category, url), ...].
+
+    settings.json feeds take precedence when configured. Otherwise fall back
+    to the legacy env-var behaviour: app defaults, overridable per category,
+    plus NEWS_FEED_* scans (NEWS_FEED_{KEY}_{SUFFIX}_URL merges into an
+    existing category tab, NEWS_FEED_{ANYTHING}_URL creates a new tab).
+
+    Excludes the supplementary Google News feeds and the auto-generated
+    Local feed — those are added in _load_feeds and always derived from
+    current config, so they never get baked into saved settings.
     """
-    # Start with defaults, allow env var overrides per category
+    settings_feeds = get_feeds()
+    if settings_feeds is not None:
+        feeds: dict[str, str] = {}
+        additional: list[tuple[str, str]] = []
+        for f in settings_feeds:
+            if f["category"] in feeds:
+                additional.append((f["category"], f["url"]))
+            else:
+                feeds[f["category"]] = f["url"]
+        result = list(feeds.items())
+        result.extend(additional)
+        return result
+
+    # Legacy env-var behaviour
     known_env_vars = {env_var for _, env_var, _ in DEFAULT_FEEDS}
-    feeds: dict[str, str] = {
+    feeds = {
         label: os.environ.get(env_var, default_url)
         for label, env_var, default_url in DEFAULT_FEEDS
     }
-    # Scan env vars for additional and custom feeds.
-    # NEWS_FEED_{KEY}_{SUFFIX}_URL  — merges into an existing category tab
-    #   e.g. NEWS_FEED_WORLD_REUTERS_URL → World tab (additional source)
-    # NEWS_FEED_{ANYTHING}_URL      — creates a new tab (existing behaviour)
     additional: list[tuple[str, str]] = []
     for key, val in sorted(os.environ.items()):
         if not (key.startswith("NEWS_FEED_") and key.endswith("_URL") and val):
@@ -92,17 +115,37 @@ def _load_feeds() -> list[tuple[str, str]]:
             label = body.replace("_", " ").title()
             feeds[label] = val
 
-    # Auto-add Local tab from Google News search if not already configured
-    if "Local" not in feeds and LOCATION_NAME:
-        encoded = quote(LOCATION_NAME)
-        feeds["Local"] = f"https://news.google.com/rss/search?q={encoded}&hl=en-US&gl=US&ceid=US:en"
-        logger.debug("Auto-added Local feed for %r via Google News search", LOCATION_NAME)
     result = list(feeds.items())
-    for label, env_var, url in SUPPLEMENTARY_FEEDS:
-        if os.environ.get(env_var, "true").lower() not in ("false", "0", "no", "off"):
-            result.append((label, url))
     result.extend(additional)
     return result
+
+
+def editable_feeds() -> list[dict]:
+    """Feeds shown in the settings UI: direct feeds only, as dicts."""
+    return [
+        {"category": category, "label": "", "url": url}
+        for category, url in _direct_feeds()
+    ]
+
+
+def _load_feeds() -> list[tuple[str, str]]:
+    """
+    Return [(category, url), ...] for all feeds to fetch:
+    direct feeds (settings or env), the auto-generated Local feed, and the
+    supplementary Google News topic feeds.
+    """
+    feeds = _direct_feeds()
+
+    # Auto-add Local tab from Google News search if not already configured
+    location = get_location_name()
+    if location and not any(cat == "Local" for cat, _ in feeds):
+        feeds.append(("Local", _auto_local_url(location)))
+        logger.debug("Auto-added Local feed for %r via Google News search", location)
+
+    for label, env_var, url in SUPPLEMENTARY_FEEDS:
+        if os.environ.get(env_var, "true").lower() not in ("false", "0", "no", "off"):
+            feeds.append((label, url))
+    return feeds
 
 
 async def _fetch_feed(client: httpx.AsyncClient, category: str, url: str) -> list[dict]:
@@ -115,9 +158,10 @@ async def _fetch_feed(client: httpx.AsyncClient, category: str, url: str) -> lis
         logger.warning("Feed fetch failed (%s): %s", url, e)
         return []
 
+    per_category = get_stories_per_category() * 2
     feed_title = parsed.feed.get("title", url.split("/")[2])
     stories = []
-    for entry in parsed.entries[:STORIES_PER_CATEGORY * 2]:
+    for entry in parsed.entries[:per_category]:
         # Google News embeds the publisher in entry.source; fall back to feed title
         source_name = (
             entry.get("source", {}).get("title")
@@ -162,6 +206,7 @@ async def refresh_news() -> list[dict]:
             category_stories.setdefault(category, []).extend(result)
 
     # Deduplicate by URL within each category, cap at STORIES_PER_CATEGORY
+    per_category = get_stories_per_category() * 2
     all_stories: list[dict] = []
     for category, stories in category_stories.items():
         seen_urls: set[str] = set()
@@ -171,7 +216,7 @@ async def refresh_news() -> list[dict]:
             if url and url not in seen_urls:
                 seen_urls.add(url)
                 kept.append(story)
-            if len(kept) >= STORIES_PER_CATEGORY * 2:
+            if len(kept) >= per_category:
                 break
         all_stories.extend(kept)
 

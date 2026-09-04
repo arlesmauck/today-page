@@ -5,19 +5,20 @@ import httpx
 from icalendar import Calendar
 from dateutil.rrule import rrule, WEEKLY, DAILY, MONTHLY, YEARLY
 
-from src.config import DATA_DIR, TIMEZONE
+from src.config import DATA_DIR
+from src.app_settings import get_calendars, get_timezone
 
 
 def normalize_dt(dt) -> datetime:
     """Convert an icalendar date/datetime to a timezone-aware datetime in local time."""
     if isinstance(dt, date) and not isinstance(dt, datetime):
-        return datetime(dt.year, dt.month, dt.day, tzinfo=TIMEZONE)
+        return datetime(dt.year, dt.month, dt.day, tzinfo=get_timezone())
     if dt is None:
-        return datetime.min.replace(tzinfo=TIMEZONE)
+        return datetime.min.replace(tzinfo=get_timezone())
     if dt.tzinfo is None:
-        return dt.replace(tzinfo=TIMEZONE)
+        return dt.replace(tzinfo=get_timezone())
     # Convert to local timezone
-    return dt.astimezone(TIMEZONE)
+    return dt.astimezone(get_timezone())
 
 
 def _parse_exdates(component) -> set:
@@ -64,12 +65,12 @@ def _expand_rrule(component, start: datetime, end: datetime | None) -> list[tupl
     # Ensure it's timezone-aware
     if isinstance(dtstart_naive, datetime):
         if dtstart_naive.tzinfo is None:
-            dtstart_aware = dtstart_naive.replace(tzinfo=TIMEZONE)
+            dtstart_aware = dtstart_naive.replace(tzinfo=get_timezone())
         else:
-            dtstart_aware = dtstart_naive.astimezone(TIMEZONE)
+            dtstart_aware = dtstart_naive.astimezone(get_timezone())
     else:
         dtstart_aware = datetime(
-            dtstart_naive.year, dtstart_naive.month, dtstart_naive.day, tzinfo=TIMEZONE
+            dtstart_naive.year, dtstart_naive.month, dtstart_naive.day, tzinfo=get_timezone()
         )
 
     # Map FREQ strings to dateutil constants
@@ -88,11 +89,11 @@ def _expand_rrule(component, start: datetime, end: datetime | None) -> list[tupl
         until = until_vals[0]
         if isinstance(until, datetime):
             if until.tzinfo is None:
-                until = until.replace(tzinfo=TIMEZONE)
+                until = until.replace(tzinfo=get_timezone())
             else:
-                until = until.astimezone(TIMEZONE)
+                until = until.astimezone(get_timezone())
         elif isinstance(until, date):
-            until = datetime(until.year, until.month, until.day, tzinfo=TIMEZONE)
+            until = datetime(until.year, until.month, until.day, tzinfo=get_timezone())
 
     # Parse BYDAY / BYWEEKDAY
     byweekday = None
@@ -119,10 +120,10 @@ def _expand_rrule(component, start: datetime, end: datetime | None) -> list[tupl
     count = rrule_prop.get("COUNT", [None])[0]
 
     # Build dateutil rrule — search window is expanded to catch multi-day events
-    window_start = (start - timedelta(days=7)).replace(tzinfo=TIMEZONE)
-    window_end = (end + timedelta(days=7)).replace(tzinfo=TIMEZONE) if end else None
+    window_start = (start - timedelta(days=7)).replace(tzinfo=get_timezone())
+    window_end = (end + timedelta(days=7)).replace(tzinfo=get_timezone()) if end else None
     if window_end is None:
-        window_end = (start + timedelta(days=30)).replace(tzinfo=TIMEZONE)
+        window_end = (start + timedelta(days=30)).replace(tzinfo=get_timezone())
 
     # Apply UNTIL bound
     if until and (window_end is None or until < window_end):
@@ -155,12 +156,12 @@ def _expand_rrule(component, start: datetime, end: datetime | None) -> list[tupl
     if dtend:
         dtend_val = dtend.dt
         if isinstance(dtend_val, date) and not isinstance(dtend_val, datetime):
-            dtend_aware = datetime(dtend_val.year, dtend_val.month, dtend_val.day, tzinfo=TIMEZONE)
+            dtend_aware = datetime(dtend_val.year, dtend_val.month, dtend_val.day, tzinfo=get_timezone())
         elif isinstance(dtend_val, datetime):
             if dtend_val.tzinfo is None:
-                dtend_aware = dtend_val.replace(tzinfo=TIMEZONE)
+                dtend_aware = dtend_val.replace(tzinfo=get_timezone())
             else:
-                dtend_aware = dtend_val.astimezone(TIMEZONE)
+                dtend_aware = dtend_val.astimezone(get_timezone())
         else:
             dtend_aware = None
         if dtend_aware:
@@ -207,7 +208,7 @@ def extract_events(ical_text: str, target_date: date) -> list[dict]:
         # Handle recurring events
         if rrule_prop and not is_all_day:
             # Build a datetime range for the target day
-            day_start = datetime(target_date.year, target_date.month, target_date.day, tzinfo=TIMEZONE)
+            day_start = datetime(target_date.year, target_date.month, target_date.day, tzinfo=get_timezone())
             day_end = day_start + timedelta(days=1)
 
             for occ_start, occ_end in _expand_rrule(component, day_start, day_end):
@@ -238,7 +239,7 @@ def extract_events(ical_text: str, target_date: date) -> list[dict]:
         elif rrule_prop and is_all_day:
             # All-day recurring events
             day_start = datetime(
-                target_date.year, target_date.month, target_date.day, tzinfo=TIMEZONE
+                target_date.year, target_date.month, target_date.day, tzinfo=get_timezone()
             )
             day_end = day_start + timedelta(days=1)
 
@@ -322,7 +323,7 @@ def extract_events(ical_text: str, target_date: date) -> list[dict]:
                 })
 
     # Sort: all-day events first, then timed events by start time
-    events.sort(key=lambda e: (0 if e["all_day"] else 1, e["start"] or datetime.min.replace(tzinfo=TIMEZONE)))
+    events.sort(key=lambda e: (0 if e["all_day"] else 1, e["start"] or datetime.min.replace(tzinfo=get_timezone())))
     return events
 
 
@@ -334,23 +335,36 @@ async def fetch_calendar(url: str) -> str:
         return resp.text
 
 
-def load_calendar_urls() -> list[str]:
-    """Load calendar URLs from environment variables.
+def effective_calendars() -> list[dict]:
+    """Calendars as [{"label", "url"}]: settings.json overrides env vars.
 
-    Any env var ending in _CALENDAR_URL (e.g. PERSONAL_CALENDAR_URL,
-    WORK_CALENDAR_URL) will be included.
+    Env fallback: any variable ending in _CALENDAR_URL (e.g.
+    PERSONAL_CALENDAR_URL, WORK_CALENDAR_URL) is included, with the
+    variable prefix as the label.
     """
+    settings_calendars = get_calendars()
+    if settings_calendars is not None:
+        return settings_calendars
     import os
     return [
-        v for k, v in os.environ.items()
+        {
+            "label": k.removesuffix("_CALENDAR_URL").replace("_", " ").title(),
+            "url": v,
+        }
+        for k, v in sorted(os.environ.items())
         if k.endswith("_CALENDAR_URL") and v and not v.startswith("TODO")
     ]
+
+
+def load_calendar_urls() -> list[str]:
+    """Load calendar URLs from settings, falling back to env vars."""
+    return [c["url"] for c in effective_calendars()]
 
 
 async def fetch_all_calendars() -> dict:
     """Fetch events from all configured calendars for today and upcoming days."""
     urls = load_calendar_urls()
-    now = datetime.now(TIMEZONE)
+    now = datetime.now(get_timezone())
     today = now.date()
     tomorrow = (now + timedelta(days=1)).date()
 

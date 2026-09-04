@@ -5,9 +5,9 @@ import logging
 import re
 from datetime import datetime, timezone
 
-from src.config import (
-    NEWS_CURATION_ENABLED, REFRESH_INTERVAL, DATA_DIR,
-    STORIES_PER_CATEGORY, get_category_quality,
+from src.config import REFRESH_INTERVAL, DATA_DIR
+from src.app_settings import (
+    get_news_curation_enabled, get_quality_gate, get_stories_per_category,
 )
 from src.news import NEWS_FILE, load_news
 
@@ -58,9 +58,17 @@ def _get_curation_prompt() -> str:
 
 
 def _input_hash(stories: list[dict]) -> str:
-    """SHA256 of sorted story URLs — used as cache key."""
+    """SHA256 of sorted story URLs plus per-category quality gates — cache key.
+
+    Gates are folded in so changing a category's strict/relaxed setting
+    invalidates the cached selection immediately.
+    """
     urls = sorted(s.get("url", "") for s in stories)
-    return hashlib.sha256(json.dumps(urls).encode()).hexdigest()[:16]
+    gates = sorted(
+        f"{cat}:{get_quality_gate(cat)}"
+        for cat in {s.get("category", "") for s in stories}
+    )
+    return hashlib.sha256(json.dumps([urls, gates]).encode()).hexdigest()[:16]
 
 
 def _load_cache() -> dict:
@@ -80,7 +88,7 @@ def _build_prompt_message(stories_by_category: dict[str, list[tuple[int, dict]]]
     """Build the user message listing all stories with IDs and per-category mode tag."""
     lines = []
     for category, numbered_stories in stories_by_category.items():
-        mode = get_category_quality(category).upper()
+        mode = get_quality_gate(category).upper()
         lines.append(f"=== {category.upper()} [{mode}] ===")
         for story_id, story in numbered_stories:
             headline = story.get("headline", "")
@@ -148,9 +156,9 @@ async def curate_news() -> int:
     write selected stories back to news.json (with selected_reason field),
     write unselected stories to unselected_stories.json.
     Returns count of unselected stories.
-    No-op (returns 0) if NEWS_CURATION_ENABLED is False.
+    No-op (returns 0) if curation is disabled in settings.
     """
-    if not NEWS_CURATION_ENABLED:
+    if not get_news_curation_enabled():
         return 0
 
     stories = load_news()
@@ -228,13 +236,14 @@ def _apply_selections(stories: list[dict], selections: dict[str, str]) -> int:
             unselected.append(story)
 
     # Re-enforce per-category cap on selected stories (preserving AI's order)
+    per_category = get_stories_per_category()
     by_category: dict[str, list[dict]] = {}
     for s in selected:
         by_category.setdefault(s.get("category", ""), []).append(s)
 
     final_selected: list[dict] = []
     for cat_stories in by_category.values():
-        final_selected.extend(cat_stories[:STORIES_PER_CATEGORY])
+        final_selected.extend(cat_stories[:per_category])
 
     logger.info(
         "Curation: %d selected from %d stories across %d categories, %d set aside",
