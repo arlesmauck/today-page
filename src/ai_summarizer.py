@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 
 import httpx
 
-from src.config import AI_SUMMARY_ENABLED, CONTEXT_MODEL, CONTEXT_ENABLED, CONTEXT_API_KEY, MAX_ARTICLE_CHARS, DATA_DIR
+from src.config import AI_SUMMARY_ENABLED, AI_MODEL, CONTEXT_MODEL, CONTEXT_ENABLED, CONTEXT_API_KEY, MAX_ARTICLE_CHARS, DATA_DIR
 from src.app_settings import get_context_max_per_refresh
 from src.news import NEWS_FILE
 
@@ -24,13 +24,21 @@ Summarize news articles at two levels of detail for a reader who wants facts and
 without emotional manipulation.
 
 Rules for all summaries:
-- Use only facts present in the article. Do not speculate.
+- Use only facts present in the article. Do not speculate and do not add outside information.
+- Lead with what happened and why it matters — not with the article's framing or its opening anecdote.
+- Strip the packaging: ignore headline hype, curiosity gaps, and teaser structure. If the \
+article never delivers what its headline promised, say plainly what it does and does not establish.
+- Prefer specifics — names, numbers, dates, official actions — over adjectives.
 - Avoid sensational, emotional, or urgency-framing language \
-("shocking", "alarming", "breaking", "you won't believe").
+("shocking", "alarming", "breaking", "slams", "you won't believe").
+- Attribute contested claims to whoever made them, and separate what is confirmed from what \
+is alleged, projected, or anonymously sourced.
 - Do not editorialize. Do not evaluate whether news is good or bad.
 - Write in plain declarative sentences at an 8th-grade reading level.
-- If the article is primarily opinion or analysis, note that in one phrase \
-("In an opinion piece, ...").
+- If the article is primarily opinion, analysis, a press release, or sponsored content, note \
+that in one phrase up front ("In an opinion piece, ...").
+- If the article is thin — mostly reaction, speculation, or a restatement of other coverage — \
+say so in the DETAIL rather than padding it out.
 
 Output format — respond with exactly this structure, nothing else:
 BRIEF: [1-2 sentences: the core fact of what happened]
@@ -39,9 +47,12 @@ and any significant differing perspectives or implications]"""
 
 CONTEXT_SYSTEM_PROMPT = (
     "You are a reference editor. Write one paragraph of essential background "
-    "for a reader encountering this news story. Cover: who the key players are, "
-    "relevant history, and why this topic matters. Use only well-established, "
-    "verifiable facts. Be neutral and concise."
+    "for a reader encountering this news story for the first time. Cover: who the key "
+    "players are, the relevant history, and why this topic matters. Use only "
+    "well-established, verifiable facts — where something is genuinely disputed, say that "
+    "it is disputed rather than picking a side. Do not re-report today's news itself, do "
+    "not speculate about what happens next, and do not editorialize. Be neutral and "
+    "concise: one paragraph, no lists or headers."
 )
 
 PROMPTS_FILE = DATA_DIR / "prompts.json"

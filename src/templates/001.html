@@ -764,6 +764,10 @@
             </div>
             {% endif %}
             <div class="settings-field">
+                <label>Briefing selection prompt — used to pick which stories the opening paragraph covers</label>
+                <textarea id="selection-prompt" rows="6"></textarea>
+            </div>
+            <div class="settings-field">
                 <label>Morning briefing prompt — used to write the opening paragraph</label>
                 <textarea id="briefing-prompt" rows="6"></textarea>
             </div>
@@ -1031,6 +1035,7 @@
                 setIfPresent('summary-prompt', prompts.summary_prompt);
                 setIfPresent('context-prompt', prompts.context_prompt);
                 setIfPresent('curation-prompt', prompts.curation_prompt);
+                setIfPresent('selection-prompt', prompts.selection_prompt);
                 setIfPresent('briefing-prompt', prompts.briefing_prompt);
 
                 setIfPresent('set-user-name', settings.user_name);
@@ -1068,6 +1073,7 @@
             setIfPresent('summary-prompt', _defaults.summary_prompt);
             setIfPresent('context-prompt', _defaults.context_prompt);
             setIfPresent('curation-prompt', _defaults.curation_prompt);
+            setIfPresent('selection-prompt', _defaults.selection_prompt);
             setIfPresent('briefing-prompt', _defaults.briefing_prompt);
 
             // Everything else → env-var defaults
@@ -1143,6 +1149,8 @@
                 if (curPrompt) promptBody.curation_prompt = curPrompt.value.trim();
                 const brfPrompt = document.getElementById('briefing-prompt');
                 if (brfPrompt) promptBody.briefing_prompt = brfPrompt.value.trim();
+                const selPrompt = document.getElementById('selection-prompt');
+                if (selPrompt) promptBody.selection_prompt = selPrompt.value.trim();
                 tasks.push(fetch('/api/config/prompts', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},

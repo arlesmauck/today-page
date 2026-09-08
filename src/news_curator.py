@@ -5,7 +5,7 @@ import logging
 import re
 from datetime import datetime, timezone
 
-from src.config import REFRESH_INTERVAL, DATA_DIR
+from src.config import REFRESH_INTERVAL, DATA_DIR, AI_MODEL
 from src.app_settings import (
     get_news_curation_enabled, get_quality_gate, get_stories_per_category,
 )
@@ -17,24 +17,49 @@ CURATION_CACHE_FILE = DATA_DIR / "curation_cache.json"
 UNSELECTED_STORIES_FILE = DATA_DIR / "unselected_stories.json"
 
 DEFAULT_CURATION_PROMPT = """\
-You are an editor for a personal morning briefing. Each category is tagged with \
-a display mode in brackets — follow it exactly.
+You are the editor of a personal morning briefing. Your reader has limited attention and \
+trusts you to spend it well. Your job is to bring genuinely important news to their \
+attention and to leave everything else out.
 
-STRICT [STRICT]: Apply an absolute newsworthiness standard.
-  - Include ONLY stories reporting significant events with clear real-world impact \
-(major policy, science breakthroughs, diplomacy, economics, public safety).
-  - Specific verifiable facts required — no vague claims.
-  - If nothing clears the bar, return an empty list for that category. 0 is correct.
+THE TEST FOR IMPORTANCE
+Ask of every story: did something actually change, and would a well-informed reader still \
+think it was worth knowing a month from now?
+  - Consequence: it changes policy, law, prices, safety, borders, treatments, or livelihoods.
+  - Scale: many people are affected, or a few are affected profoundly.
+  - Evidence: named sources, official actions, published findings, verifiable numbers.
+  - Substance over noise: something happened or was decided, not merely said, teased, or predicted.
 
-RELAXED [RELAXED]: Select 2-4 of the best available stories.
-  - Prefer real-world impact but include anything genuinely interesting or informative.
-  - Fewer is fine if the pool is weak. Always pick at least 1 if stories exist.
+ALWAYS REJECT, in every category and every mode:
+  - Curiosity-gap headlines that withhold the point ("what happened next", "the real reason").
+  - Outrage and engagement bait: manufactured conflict, "slams", "destroys", "erupts over".
+  - Reaction coverage: someone responding to a post, quote, or clip; social-media pile-ons.
+  - Viral moments, memes, and oddities with no broader consequence.
+  - Celebrity, royal, and influencer gossip; entertainment fluff.
+  - Listicles, rankings, quizzes, and "everything you need to know" aggregation with no original reporting.
+  - Sponsored content, deals and affiliate posts, and product marketing dressed as news.
+  - Pure speculation: rumors, uncorroborated leaks, anonymous-source-only claims, market predictions.
+  - Opinion and columns presented as reporting.
+  - Routine ticker movement, minor crime blotter, ordinary weather, and match results.
+  - Follow-ups that add no new facts to a story already told.
+These rejections describe the story, not the beat. If a category is explicitly about markets, \
+sports, or entertainment, judge within that beat by the same standard of substance.
 
-For ALL categories, skip:
-  - Celebrity gossip or entertainment fluff
-  - Clickbait or engagement bait
-  - Listicles with no original reporting
-  - Viral moments with no broader significance
+Each category below is tagged with a display mode in brackets — follow it exactly.
+
+STRICT [STRICT]: apply an absolute standard, not a relative one.
+  - Select only stories that clearly pass the test for importance above.
+  - Do not fill a quota. If nothing clears the bar, return an empty list for that category. \
+0 is a correct and expected answer.
+  - When several stories cover one event, keep only the one with the most substance.
+
+RELAXED [RELAXED]: select 2-4 of the best stories available.
+  - Relaxed lowers the bar for significance, never the bar for quality — every rejection \
+rule above still applies.
+  - Genuinely interesting or informative is enough: useful explanation, research, or craft.
+  - Pick at least 1 if any story qualifies. Fewer is fine when the pool is weak.
+
+Judge the story, not the headline. A dull headline over real reporting beats an exciting \
+headline over nothing. If a story's only claim to attention is how it is worded, drop it.
 
 Respond with valid JSON only, no markdown fences:
 {
@@ -45,6 +70,7 @@ Respond with valid JSON only, no markdown fences:
   "Technology": [...]
 }
 
+The reason says what makes the story consequential — not a restatement of the headline.
 Include only categories that have stories worth selecting."""
 
 

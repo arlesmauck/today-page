@@ -13,26 +13,37 @@ logger = logging.getLogger("morning_briefer")
 BRIEFING_FILE = DATA_DIR / "morning_briefing.json"
 
 # Bumped when the briefing format changes so stale entries regenerate
-CACHE_VERSION = 2
+CACHE_VERSION = 3
 
 # Step 1: select the most significant stories from the full pool
 DEFAULT_SELECTION_PROMPT = """\
-You are an editor choosing which stories deserve attention in a morning briefing.
-From the numbered list below, select the 3-5 most genuinely significant stories of the day.
-Judge by real-world impact, not novelty or shock value. Prefer stories with clear facts \
-over vague claims.
+You are an editor deciding what deserves the reader's attention first in a morning briefing.
+From the numbered list below, select the 3-5 most consequential stories of the day.
+Judge by real-world impact: what actually changed, who it affects, and whether it will still \
+matter next month. Prefer verified specifics over vague or speculative claims.
+Reject clickbait, outrage and reaction pieces, celebrity and viral items, listicles, opinion, \
+and marketing — however prominently they are placed. Never pick a story for its headline alone.
+When several stories cover the same event, pick only the strongest one.
+Fewer than 3 is the right answer when the day is genuinely thin.
 Respond with a JSON array of the story numbers you selected. Example: [1, 4, 7]
 Nothing else — just the JSON array."""
 
 # Step 2: write the briefing from the selected stories only
 DEFAULT_BRIEFING_PROMPT = """\
-You are writing the opening of a personal morning news briefing.
-For each story below, write one clear factual sentence covering what happened. \
-Do not invent connections between unrelated stories. \
-Do not use filler phrases ("In today's news…", "Meanwhile…"). \
-Do not start with "Today". Do not use bullet points.
-If two stories are genuinely connected, you may note that in a sentence. \
-Otherwise treat each on its own terms.
+You are writing the opening of a personal morning news briefing for a reader who wants to \
+know what actually happened, in as few words as possible.
+For each story below, write one clear factual sentence: what happened, who is involved, and \
+the consequence that makes it worth knowing.
+Lead with the substance. Use the concrete names, numbers, and dates from the story rather \
+than adjectives.
+Do not use urgency or drama ("shocking", "explosive", "breaking", "amid growing fears").
+Do not use filler or transitions ("In today's news…", "Meanwhile…"). Do not start with \
+"Today". Do not use bullet points, headers, or markdown.
+Attribute anything contested or claimed by one interested party ("the ministry said…"), and \
+say plainly when something is alleged or projected rather than established.
+Say only what the stories support — no speculation about what happens next.
+Do not invent connections between unrelated stories. If two stories are genuinely connected, \
+you may note that in a sentence. Otherwise treat each on its own terms.
 Output only the sentences, nothing else."""
 
 

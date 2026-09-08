@@ -95,13 +95,14 @@ async def get_prompts():
     """Return active prompts and hardcoded defaults."""
     from src.ai_summarizer import SYSTEM_PROMPT, CONTEXT_SYSTEM_PROMPT, _load_prompts
     from src.news_curator import DEFAULT_CURATION_PROMPT
-    from src.morning_briefer import DEFAULT_BRIEFING_PROMPT
+    from src.morning_briefer import DEFAULT_BRIEFING_PROMPT, DEFAULT_SELECTION_PROMPT
     active = _load_prompts()
     return {
         "summary_prompt": active["summary_prompt"],
         "context_prompt": active["context_prompt"],
         "curation_prompt": active.get("curation_prompt") or DEFAULT_CURATION_PROMPT,
         "briefing_prompt": active.get("briefing_prompt") or DEFAULT_BRIEFING_PROMPT,
+        "selection_prompt": active.get("selection_prompt") or DEFAULT_SELECTION_PROMPT,
         "context_enabled": CONTEXT_ENABLED,
         "curation_enabled": get_news_curation_enabled(),
         "defaults": {
@@ -109,6 +110,7 @@ async def get_prompts():
             "context_prompt": CONTEXT_SYSTEM_PROMPT,
             "curation_prompt": DEFAULT_CURATION_PROMPT,
             "briefing_prompt": DEFAULT_BRIEFING_PROMPT,
+            "selection_prompt": DEFAULT_SELECTION_PROMPT,
         },
     }
 
@@ -126,6 +128,7 @@ async def save_prompts(request: Request):
     context_prompt = body.get("context_prompt", "").strip()
     curation_prompt = body.get("curation_prompt", "").strip()
     briefing_prompt = body.get("briefing_prompt", "").strip()
+    selection_prompt = body.get("selection_prompt", "").strip()
 
     if not summary_prompt:
         return JSONResponse(status_code=422, content={"error": "summary_prompt must not be empty"})
@@ -138,6 +141,8 @@ async def save_prompts(request: Request):
         data["curation_prompt"] = curation_prompt
     if briefing_prompt:
         data["briefing_prompt"] = briefing_prompt
+    if selection_prompt:
+        data["selection_prompt"] = selection_prompt
     PROMPTS_FILE.write_text(_json.dumps(data, indent=2, ensure_ascii=False))
     return {"status": "saved"}
 

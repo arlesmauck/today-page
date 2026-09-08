@@ -16,7 +16,10 @@ CLUSTER_CACHE_FILE = DATA_DIR / "cluster_cache.json"
 SYNTHESIS_SYSTEM_PROMPT = (
     "Multiple news sources covered the same story. "
     "Write a single concise summary (2-3 sentences) combining the most important facts "
-    "from all versions. Include specific details that appear in multiple sources. "
+    "from all versions. Prioritize details that appear in more than one source; treat a "
+    "detail that appears in only one source as less certain, and attribute it if you "
+    "include it. State plainly where the sources disagree. Use neutral wording rather "
+    "than any one source's framing, and drop sensational or urgency language. "
     "Factual, no editorializing. Output only the summary sentences, nothing else."
 )
 
