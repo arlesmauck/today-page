@@ -74,7 +74,9 @@ Any variable ending in `_CALENDAR_URL` is picked up automatically.
 
 Default feeds are included out of the box (Reuters World News, Ars Technica Science & Tech) — no configuration required.
 
-To override or add feeds, set these in your `.env`:
+News categories (the tabs) and their feeds can be managed in the app: click the ⚙ gear at the bottom of the page. Adding, renaming, or removing a category updates the tabs and the feeds that fill them.
+
+To override or add feeds via `.env` instead, set these:
 
 ```bash
 NEWS_FEED_WORLD_URL=https://feeds.reuters.com/reuters/topNews

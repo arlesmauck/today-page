@@ -12,7 +12,9 @@ import httpx
 from urllib.parse import quote
 
 from src.config import DATA_DIR
-from src.app_settings import get_feeds, get_location_name, get_stories_per_category
+from src.app_settings import (
+    get_feeds, get_location_name, get_stories_per_category, load_settings,
+)
 
 logger = logging.getLogger("news")
 
@@ -131,21 +133,58 @@ def editable_feeds() -> list[dict]:
     ]
 
 
+def _derived_categories() -> list[str]:
+    """Categories implied by the feed config when settings.json has no explicit list."""
+    cats = [cat for cat, _ in _direct_feeds()]
+    if get_location_name() and "Local" not in cats:
+        cats.append("Local")
+    for label, _, _ in SUPPLEMENTARY_FEEDS:
+        if label not in cats:
+            cats.append(label)
+    return cats
+
+
+def effective_categories() -> list[str]:
+    """
+    Categories the app recognizes, in tab order.
+
+    An explicit `categories` list in settings.json is authoritative — feed
+    categories are unioned in so a feed can still introduce a new tab.
+    Without one, categories are derived from the feed config, including the
+    auto Local tab and the supplementary Google News categories. The
+    auto-Local and supplementary feeds only load for categories present here,
+    which is what makes a deleted category stay deleted.
+    """
+    saved = load_settings().get("categories")
+    cats = [str(c).strip() for c in saved if isinstance(c, str) and str(c).strip()] \
+        if isinstance(saved, list) else []
+    if not cats:
+        return _derived_categories()
+    for cat, _ in _direct_feeds():
+        if cat not in cats:
+            cats.append(cat)
+    return cats
+
+
 def _load_feeds() -> list[tuple[str, str]]:
     """
     Return [(category, url), ...] for all feeds to fetch:
     direct feeds (settings or env), the auto-generated Local feed, and the
-    supplementary Google News topic feeds.
+    supplementary Google News topic feeds. The auto Local and supplementary
+    feeds only load for categories in effective_categories().
     """
     feeds = _direct_feeds()
+    categories = set(effective_categories())
 
-    # Auto-add Local tab from Google News search if not already configured
+    # Auto-add Local tab from Google News search if configured and not already covered
     location = get_location_name()
-    if location and not any(cat == "Local" for cat, _ in feeds):
+    if location and "Local" in categories and not any(cat == "Local" for cat, _ in feeds):
         feeds.append(("Local", _auto_local_url(location)))
         logger.debug("Auto-added Local feed for %r via Google News search", location)
 
     for label, env_var, url in SUPPLEMENTARY_FEEDS:
+        if label not in categories:
+            continue
         if os.environ.get(env_var, "true").lower() not in ("false", "0", "no", "off"):
             feeds.append((label, url))
     return feeds
@@ -246,10 +285,13 @@ def load_news() -> list[dict]:
 
 
 def news_categories() -> list[str]:
-    """Return ordered unique category labels from the current story cache."""
-    seen: list[str] = []
-    for story in load_news():
-        cat = story.get("category", "")
-        if cat and cat not in seen:
-            seen.append(cat)
-    return seen
+    """
+    Ordered unique category labels from the current story cache, ordered by
+    the configured categories; any leftover cache categories follow.
+    """
+    story_cats = list(dict.fromkeys(
+        s.get("category", "") for s in load_news() if s.get("category", "")
+    ))
+    ordered = [c for c in effective_categories() if c in set(story_cats)]
+    ordered.extend(c for c in story_cats if c not in ordered)
+    return ordered

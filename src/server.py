@@ -21,7 +21,7 @@ from src.app_settings import (
 )
 from src.fetcher import load_weather, refresh_weather
 from src.calendar import effective_calendars, load_calendar
-from src.news import editable_feeds, load_news, news_categories
+from src.news import editable_feeds, effective_categories, load_news, news_categories
 from src.builder import write_page
 from src.scheduler import refresh_now
 
@@ -169,11 +169,12 @@ async def get_app_settings():
     mask back unchanged, or a new full URL to replace it.
     """
     feeds = editable_feeds()
-    # Ordered unique categories: current feeds first, then known defaults
-    feed_categories: list[str] = []
-    for cat in [f["category"] for f in feeds] + _KNOWN_CATEGORIES:
-        if cat not in feed_categories:
-            feed_categories.append(cat)
+    # The managed category list (settings or derived from feeds), plus known
+    # defaults as datalist suggestions for feed rows
+    categories = effective_categories()
+    feed_categories: list[str] = categories + [
+        cat for cat in _KNOWN_CATEGORIES if cat not in categories
+    ]
 
     return {
         "is_custom": app_settings.settings_exist(),
@@ -188,10 +189,11 @@ async def get_app_settings():
             for c in effective_calendars()
         ],
         "feeds": feeds,
+        "categories": categories,
         "feed_categories": feed_categories,
         "news_curation_enabled": app_settings.get_news_curation_enabled(),
         "quality_gates": {
-            cat: app_settings.get_quality_gate(cat) for cat in feed_categories
+            cat: app_settings.get_quality_gate(cat) for cat in categories
         },
         "context_max_per_refresh": app_settings.get_context_max_per_refresh(),
         "stories_per_category": app_settings.get_stories_per_category(),
@@ -285,6 +287,25 @@ def _validate_settings(body: dict) -> tuple[dict | None, str]:
                 continue
             cleaned_feeds.append({"category": category, "label": label, "url": url})
 
+    # Categories: the news tabs, in order. Feed categories are unioned in at
+    # read time (see effective_categories), so a feed can still add a new tab.
+    cleaned_categories: list[str] = []
+    cats_raw = body.get("categories")
+    if cats_raw is None:
+        cats_raw = []
+    if not isinstance(cats_raw, list):
+        errors.append("Categories must be a list")
+    else:
+        for i, cat in enumerate(cats_raw, 1):
+            name = str(cat or "").strip()
+            if not name:
+                continue  # blank row
+            if len(name) > 40:
+                errors.append(f"Category {i}: name too long (max 40 characters)")
+                continue
+            if name.lower() not in (c.lower() for c in cleaned_categories):
+                cleaned_categories.append(name)
+
     # Calendars: masks mean "unchanged", anything else must be a full http(s) URL
     cleaned_calendars: list[dict] = []
     calendars_raw = body.get("calendars")
@@ -371,6 +392,7 @@ def _validate_settings(body: dict) -> tuple[dict | None, str]:
         "timezone": timezone_name,
         "calendars": cleaned_calendars,
         "feeds": cleaned_feeds,
+        "categories": cleaned_categories,
         "news_curation_enabled": curation_enabled,
         "quality_gates": cleaned_gates,
         "context_max_per_refresh": context_max,
@@ -381,8 +403,10 @@ def _validate_settings(body: dict) -> tuple[dict | None, str]:
 
 def _pool_signature(s: dict) -> tuple:
     """The parts of a settings dict that determine what data gets fetched.
-    Feed labels are display-only and deliberately excluded."""
+    Feed labels are display-only and deliberately excluded. Categories are
+    included so removing/renaming one re-categorizes the story cache."""
     feeds = s.get("feeds") or []
+    cats = s.get("categories")
     return (
         s.get("location_name"),
         s.get("latitude"),
@@ -390,6 +414,7 @@ def _pool_signature(s: dict) -> tuple:
         s.get("timezone"),
         s.get("stories_per_category"),
         sorted((f.get("category"), f.get("url")) for f in feeds if isinstance(f, dict)),
+        tuple(sorted(str(c) for c in cats)) if isinstance(cats, list) else (),
     )
 
 

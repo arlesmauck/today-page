@@ -711,11 +711,18 @@
             <p class="settings-hint">Secret iCal (.ics) addresses. Saved URLs are never sent back to the browser —
             they appear masked here, and typing a new URL replaces the saved one. Leave a masked row untouched to keep it.</p>
 
+            <div class="settings-section">News categories</div>
+            <div id="category-rows"></div>
+            <button type="button" class="add-row-btn" onclick="addCategoryRow()">+ Add category</button>
+            <p class="settings-hint">The tabs on your news page, top to bottom. Renaming a category renames
+            its feeds; removing one removes its feeds and any matching background news feed.
+            A &ldquo;Local&rdquo; tab is generated from your location name while it exists here.</p>
+
             <div class="settings-section">News feeds</div>
             <div id="feed-rows"></div>
             <button type="button" class="add-row-btn" onclick="addFeedRow()">+ Add feed</button>
-            <p class="settings-hint">Each feed fills a tab; use the same category name to merge feeds into one tab.
-            A &ldquo;Local&rdquo; tab is generated automatically from your location name.</p>
+            <p class="settings-hint">Each feed fills a category tab; use the same category name to merge
+            feeds into one tab. Adding a feed with a new category name creates that tab.</p>
 
             <div class="settings-section">Curation &amp; display</div>
             <div class="settings-check">
@@ -884,13 +891,16 @@
 
         // ── Dynamic rows (calendars, feeds, quality gates) ───────────────────
 
-        function makeRemoveButton(row) {
+        function makeRemoveButton(row, onRemove) {
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.className = 'dyn-remove';
             btn.textContent = '✕';
             btn.title = 'Remove';
-            btn.onclick = () => row.remove();
+            btn.onclick = () => {
+                if (onRemove) onRemove();
+                row.remove();
+            };
             return btn;
         }
 
@@ -930,6 +940,66 @@
                 const url = urlInput.value.trim() || urlInput.dataset.existing || '';
                 if (!label && !url) return;
                 out.push({label: label, url: url});
+            });
+            return out;
+        }
+
+        function categoryRow(name) {
+            const row = document.createElement('div');
+            row.className = 'dyn-row';
+            const input = document.createElement('input');
+            input.className = 'dyn-input dyn-cat';
+            input.placeholder = 'Category (tab)';
+            input.value = name || '';
+            input.setAttribute('list', 'feed-category-list');
+            if (name) input.dataset.original = name;
+
+            const gateFor = orig =>
+                document.querySelector('#quality-rows select[data-cat="' + CSS.escape(orig) + '"]');
+
+            // Renaming a category renames its feeds and quality-gate entry to match
+            input.addEventListener('change', () => {
+                const orig = input.dataset.original;
+                const renamed = input.value.trim();
+                if (!orig || !renamed || renamed === orig) return;
+                document.querySelectorAll('#feed-rows .dyn-row').forEach(r => {
+                    if (r.children[0].value.trim() === orig) r.children[0].value = renamed;
+                });
+                const gate = gateFor(orig);
+                if (gate) {
+                    gate.dataset.cat = renamed;
+                    gate.closest('.quality-row').querySelector('.quality-name').textContent = renamed;
+                }
+                input.dataset.original = renamed;
+            });
+
+            // Removing a category removes its feeds and quality-gate entry with it
+            row.append(input, makeRemoveButton(row, () => {
+                const orig = input.dataset.original || input.value.trim();
+                document.querySelectorAll('#feed-rows .dyn-row').forEach(r => {
+                    if (r.children[0].value.trim() === orig) r.remove();
+                });
+                const gate = gateFor(orig);
+                if (gate) gate.closest('.quality-row').remove();
+            }));
+            return row;
+        }
+
+        function renderCategoryRows(categories) {
+            const wrap = document.getElementById('category-rows');
+            wrap.innerHTML = '';
+            (categories || []).forEach(c => wrap.appendChild(categoryRow(c)));
+        }
+
+        function addCategoryRow() {
+            document.getElementById('category-rows').appendChild(categoryRow(''));
+        }
+
+        function collectCategories() {
+            const out = [];
+            document.querySelectorAll('#category-rows .dyn-row').forEach(row => {
+                const name = row.children[0].value.trim();
+                if (name && !out.some(c => c.toLowerCase() === name.toLowerCase())) out.push(name);
             });
             return out;
         }
@@ -1008,9 +1078,10 @@
         }
 
         function collectQualityGates() {
+            const cats = collectCategories().map(c => c.toLowerCase());
             const out = {};
             document.querySelectorAll('#quality-rows select').forEach(sel => {
-                out[sel.dataset.cat] = sel.value;
+                if (cats.includes(sel.dataset.cat.toLowerCase())) out[sel.dataset.cat] = sel.value;
             });
             return out;
         }
@@ -1046,10 +1117,11 @@
                 setIfPresent('set-timezone', settings.timezone);
 
                 renderCalendarRows(settings.calendars || []);
+                renderCategoryRows(settings.categories || []);
                 renderFeedRows(settings.feeds || [], settings.feed_categories || []);
 
                 document.getElementById('set-curation-enabled').checked = !!settings.news_curation_enabled;
-                renderQualityRows(settings.quality_gates || {}, settings.feed_categories || []);
+                renderQualityRows(settings.quality_gates || {}, settings.categories || []);
 
                 setIfPresent('set-stories-per', settings.stories_per_category);
                 setIfPresent('set-cluster-threshold', settings.cluster_threshold);
@@ -1122,6 +1194,7 @@
                 longitude: fieldVal('set-longitude'),
                 timezone: fieldVal('set-timezone'),
                 calendars: collectCalendars(),
+                categories: collectCategories(),
                 feeds: collectFeeds(),
                 news_curation_enabled: document.getElementById('set-curation-enabled').checked,
                 quality_gates: collectQualityGates(),
