@@ -37,8 +37,11 @@ DEFAULT_FEEDS = [
 _GNEWS_BASE = "https://news.google.com/rss/topics"
 SUPPLEMENTARY_FEEDS = [
     ("World",      "NEWS_GNEWS_WORLD",  f"{_GNEWS_BASE}/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx1YlY4U0FtVnVHZ0pWVXlnQVAB"),
-    ("Technology", "NEWS_GNEWS_TECH",   f"{_GNEWS_BASE}/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGRqTlhRU0FtVnVHZ0pWVXlnQVAB"),
-    ("Science",    "NEWS_GNEWS_SCI",    f"{_GNEWS_BASE}/CAAqJggKIiBDQkFTRWdvSUwyMHZNR1ptZHpRU0FtVnVHZ0pWVXlnQVAB"),
+    # Technology/Science use the classic topic-URL style — the opaque topic IDs
+    # expire (404) but this style 302s to the current one. World/Health IDs
+    # verified working 2026-09; switch them to this style if they ever 404.
+    ("Technology", "NEWS_GNEWS_TECH",   "https://news.google.com/rss/headlines/section/topic/TECHNOLOGY?hl=en-US&gl=US&ceid=US:en"),
+    ("Science",    "NEWS_GNEWS_SCI",    "https://news.google.com/rss/headlines/section/topic/SCIENCE?hl=en-US&gl=US&ceid=US:en"),
     ("Health",     "NEWS_GNEWS_HEALTH", f"{_GNEWS_BASE}/CAAqIQgKIhtDQkFTRGdvSUwyMHZNR3QwTlRFU0FtVnVLQUFQAQ"),
 ]
 

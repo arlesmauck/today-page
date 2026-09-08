@@ -154,6 +154,8 @@ def _parse_llm_response(text: str, id_to_story: dict[int, dict]) -> dict[str, st
             if not isinstance(item, dict):
                 continue
             story_id = item.get("id")
+            if isinstance(story_id, str) and story_id.strip().isdigit():
+                story_id = int(story_id.strip())  # models sometimes emit string IDs
             reason = str(item.get("reason", "")).strip()
             if story_id is not None and story_id in id_to_story:
                 url = id_to_story[story_id].get("url", "")
