@@ -134,8 +134,12 @@ def editable_feeds() -> list[dict]:
 
 
 def _derived_categories() -> list[str]:
-    """Categories implied by the feed config when settings.json has no explicit list."""
-    cats = [cat for cat, _ in _direct_feeds()]
+    """Categories implied by the feed config when settings.json has no explicit list.
+    Feeds commonly share a category (multiple sources per tab), so dedupe."""
+    cats: list[str] = []
+    for cat, _ in _direct_feeds():
+        if cat not in cats:
+            cats.append(cat)
     if get_location_name() and "Local" not in cats:
         cats.append("Local")
     for label, _, _ in SUPPLEMENTARY_FEEDS:
@@ -156,8 +160,11 @@ def effective_categories() -> list[str]:
     which is what makes a deleted category stay deleted.
     """
     saved = load_settings().get("categories")
-    cats = [str(c).strip() for c in saved if isinstance(c, str) and str(c).strip()] \
-        if isinstance(saved, list) else []
+    cats: list[str] = []
+    if isinstance(saved, list):
+        for c in saved:
+            if isinstance(c, str) and c.strip() and c.strip() not in cats:
+                cats.append(c.strip())
     if not cats:
         return _derived_categories()
     for cat, _ in _direct_feeds():
