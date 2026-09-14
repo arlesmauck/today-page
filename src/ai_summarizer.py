@@ -87,11 +87,24 @@ def _load_cache() -> dict:
     except (json.JSONDecodeError, OSError):
         logger.warning("Cache file unreadable — starting fresh")
         return {}
+    if not isinstance(raw, dict):
+        logger.warning("Cache file did not contain an object — starting fresh")
+        return {}
+
     cutoff = datetime.now(timezone.utc) - timedelta(days=CACHE_TTL_DAYS)
-    pruned = {
-        url: entry for url, entry in raw.items()
-        if datetime.fromisoformat(entry["cached_at"]) > cutoff
-    }
+    pruned = {}
+    for url, entry in raw.items():
+        if not isinstance(entry, dict):
+            continue
+        try:
+            cached_at = datetime.fromisoformat(entry["cached_at"])
+            if cached_at.tzinfo is None:
+                cached_at = cached_at.replace(tzinfo=timezone.utc)
+        except (KeyError, TypeError, ValueError):
+            logger.debug("Skipping malformed cache entry for %s", url)
+            continue
+        if cached_at > cutoff:
+            pruned[url] = entry
     expired = len(raw) - len(pruned)
     if expired:
         logger.debug("Pruned %d expired cache entries", expired)
@@ -100,6 +113,23 @@ def _load_cache() -> dict:
 
 def _save_cache(cache: dict) -> None:
     CACHE_FILE.write_text(json.dumps(cache, indent=2, ensure_ascii=False))
+
+
+def _cached_summary(entry: dict) -> dict | None:
+    """Normalize a cached summary, tolerating entries from older cache formats."""
+    if not isinstance(entry, dict):
+        return None
+    brief = entry.get("summary_brief") or entry.get("brief")
+    detail = entry.get("summary_detail") or entry.get("detail")
+    if not brief or not detail:
+        return None
+    return {
+        "brief": brief,
+        "detail": detail,
+        "accessible": bool(entry.get("accessible")),
+        "ai_source": entry.get("ai_source", "cache"),
+        "context": entry.get("summary_context") or entry.get("context"),
+    }
 
 
 async def _fetch_article_text(
@@ -128,11 +158,11 @@ def _parse_llm_response(text: str) -> tuple[str, str] | None:
     import re
     # Normalize line endings and strip markdown bold around labels
     text = text.replace("\r\n", "\n").replace("\r", "\n")
-    text = re.sub(r"\*\*(BRIEF|DETAIL):\*\*", r"\1:", text)
-    # Split on DETAIL: regardless of whether a newline precedes it
-    parts = re.split(r"\n?DETAIL:", text, maxsplit=1)
+    text = re.sub(r"\*\*\s*(BRIEF|DETAIL)\s*:\s*\*\*", r"\1:", text, flags=re.IGNORECASE)
+    # Split on DETAIL: regardless of casing or whether a newline precedes it.
+    parts = re.split(r"\n?\s*DETAIL\s*:\s*", text, maxsplit=1, flags=re.IGNORECASE)
     if len(parts) == 2:
-        brief = re.sub(r"^BRIEF:\s*", "", parts[0], flags=re.IGNORECASE).strip()
+        brief = re.sub(r"^\s*BRIEF\s*:\s*", "", parts[0], flags=re.IGNORECASE).strip()
         detail = parts[1].strip()
         if brief and detail:
             return brief, detail
@@ -189,17 +219,19 @@ async def _summarize_one(
     # Cache hit — apply and return immediately
     if url and url in cache:
         logger.debug("Cache hit: %r", headline[:60])
-        entry = cache[url]
-        enriched = {
-            **story,
-            "summary_brief": entry["summary_brief"],
-            "summary_detail": entry["summary_detail"],
-            "accessible": entry["accessible"],
-            "ai_source": entry["ai_source"],
-        }
-        if entry.get("summary_context"):
-            enriched["summary_context"] = entry["summary_context"]
-        return enriched
+        cached = _cached_summary(cache[url])
+        if cached:
+            enriched = {
+                **story,
+                "summary_brief": cached["brief"],
+                "summary_detail": cached["detail"],
+                "accessible": cached["accessible"],
+                "ai_source": cached["ai_source"],
+            }
+            if cached.get("context"):
+                enriched["summary_context"] = cached["context"]
+            return enriched
+        logger.debug("Ignoring incomplete cache entry: %r", headline[:60])
 
     logger.debug("Cache miss — fetching article: %r", headline[:60])
 
@@ -349,17 +381,17 @@ async def summarize_on_demand(url: str, headline: str, lede: str) -> dict:
 
     # Cache hit — return immediately at no cost
     if url and url in cache:
-        entry = cache[url]
-        logger.debug("On-demand cache hit: %r", headline[:60])
-        result = {
-            "brief": entry["summary_brief"],
-            "detail": entry["summary_detail"],
-            "accessible": entry["accessible"],
-            "ai_source": entry["ai_source"],
-        }
-        if entry.get("summary_context"):
-            result["context"] = entry["summary_context"]
-        return result
+        cached = _cached_summary(cache[url])
+        if cached:
+            logger.debug("On-demand cache hit: %r", headline[:60])
+            return {
+                "brief": cached["brief"],
+                "detail": cached["detail"],
+                "accessible": cached["accessible"],
+                "ai_source": cached["ai_source"],
+                **({"context": cached["context"]} if cached.get("context") else {}),
+            }
+        logger.debug("Ignoring incomplete on-demand cache entry: %r", headline[:60])
 
     logger.info("On-demand summarize: %r", headline[:60])
 
@@ -375,7 +407,7 @@ async def summarize_on_demand(url: str, headline: str, lede: str) -> dict:
     _save_cache(cache)
 
     # Remap internal keys to the on-demand API shape
-    if not enriched.get("summary_brief"):
+    if not enriched.get("summary_brief") or not enriched.get("summary_detail"):
         return {"accessible": enriched.get("accessible"), "ai_source": enriched.get("ai_source")}
 
     result = {

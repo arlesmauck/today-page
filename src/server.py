@@ -23,7 +23,7 @@ from src.fetcher import load_weather, refresh_weather
 from src.calendar import effective_calendars, load_calendar
 from src.news import editable_feeds, effective_categories, load_news, news_categories
 from src.builder import write_page
-from src.tasks import MAX_TASK_LENGTH, create_task, load_tasks, set_task_completed
+from src.tasks import MAX_TASK_LENGTH, create_task, load_tasks, update_task
 from src.scheduler import refresh_now
 
 logger = logging.getLogger("server")
@@ -116,18 +116,31 @@ async def add_task(request: Request):
 
 
 @app.patch("/api/tasks/{task_id}")
-async def update_task(task_id: str, request: Request):
-    """Update a task's completion state."""
+async def patch_task(task_id: str, request: Request):
+    """Update a task's text and/or completion state."""
     try:
         body = await request.json()
     except Exception:
         return JSONResponse(status_code=400, content={"error": "Invalid JSON body"})
 
-    completed = body.get("completed") if isinstance(body, dict) else None
-    if not isinstance(completed, bool):
-        return JSONResponse(status_code=422, content={"error": "completed must be a boolean"})
+    if not isinstance(body, dict) or not body:
+        return JSONResponse(status_code=422, content={"error": "Nothing to update"})
 
-    task = set_task_completed(task_id, completed)
+    completed = body.get("completed")
+    text = body.get("text")
+    if "completed" in body and not isinstance(completed, bool):
+        return JSONResponse(status_code=422, content={"error": "completed must be a boolean"})
+    if "text" in body and not isinstance(text, str):
+        return JSONResponse(status_code=422, content={"error": "text must be a string"})
+
+    try:
+        task = update_task(
+            task_id,
+            text=text if "text" in body else None,
+            completed=completed if "completed" in body else None,
+        )
+    except ValueError as exc:
+        return JSONResponse(status_code=422, content={"error": str(exc)})
     if task is None:
         return JSONResponse(status_code=404, content={"error": "Task not found"})
     return {"task": task}
@@ -526,8 +539,11 @@ async def summarize_story(
     from src.ai_summarizer import summarize_on_demand
     try:
         result = await summarize_on_demand(url, headline, lede)
-        if not result.get("brief"):
-            return JSONResponse(status_code=422, content={"error": "Could not summarize this story"})
+        if not result.get("brief") or not result.get("detail"):
+            return JSONResponse(
+                status_code=422,
+                content={"error": "Could not generate a detailed summary for this story"},
+            )
         return result
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})

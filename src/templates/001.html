@@ -109,17 +109,22 @@
             margin: 0;
         }
         .task-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.4rem;
             border-bottom: 1px solid #f0ede6;
             padding: 0.65rem 0;
         }
         .task-item:last-child { border-bottom: none; }
         .task-item > label {
+            flex: 1;
+            min-width: 0;
             display: flex;
             align-items: flex-start;
             gap: 0.65rem;
             cursor: pointer;
         }
-        .task-item input {
+        .task-item > label input {
             position: absolute;
             width: 1px;
             height: 1px;
@@ -173,6 +178,60 @@
             font-style: italic;
             padding: 0.35rem 0 0.1rem;
         }
+        .task-edit {
+            flex: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.4rem;
+            height: 1.4rem;
+            margin-top: 0.05rem;
+            border: none;
+            border-radius: 4px;
+            background: transparent;
+            color: #b0a898;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+            line-height: 1;
+            cursor: pointer;
+        }
+        .task-edit:hover { background: #f0ede6; color: #4a4540; }
+        .task-edit:focus-visible { outline: 2px solid #b0a898; outline-offset: 1px; }
+        .task-item.editing > label,
+        .task-item.editing > .task-edit { display: none; }
+        .task-edit-form {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            gap: 0.5rem;
+        }
+        .task-edit-form[hidden] { display: none; }
+        .task-save {
+            flex: none;
+            width: 2.1rem;
+            border: 1px solid #2d2d2d;
+            border-radius: 4px;
+            background: #2d2d2d;
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            font-size: 1.1rem;
+            line-height: 1;
+            cursor: pointer;
+        }
+        .task-save:hover { background: #4a4540; }
+        .task-cancel {
+            flex: none;
+            width: 2.1rem;
+            border: 1px solid #e0dcd4;
+            border-radius: 4px;
+            background: #fff;
+            color: #4a4540;
+            font-family: 'Inter', sans-serif;
+            font-size: 1.1rem;
+            line-height: 1;
+            cursor: pointer;
+        }
+        .task-cancel:hover { background: #f0ede6; }
         .task-status {
             font-family: 'Inter', sans-serif;
             font-size: 0.72rem;
@@ -432,6 +491,10 @@
             text-decoration: none;
         }
         .story-link:hover { color: #8b7355; text-decoration: underline; }
+        .detail-error {
+            color: #9b5c4c;
+            font-size: 0.85rem;
+        }
 
         /* Footer */
         footer {
@@ -756,18 +819,21 @@
                 {% endif %}
                 <p class="story-lede">{{ story.lede }}</p>
                 {% if ai_summary_enabled and story.url %}
-                <button class="expand-btn"
+                <button type="button" class="expand-btn"
                     data-url="{{ story.url }}"
                     data-headline="{{ story.headline | e }}"
                     data-lede="{{ story.lede | e }}"
+                    data-summary-brief="{{ story.summary_brief | default('', true) | e }}"
+                    data-summary-detail="{{ story.summary_detail | default('', true) | e }}"
+                    aria-expanded="false"
                     onclick="fetchSummary(this)">More detail</button>
                 <div class="story-detail" hidden>
                     <p class="detail-text"></p>
-                    <a class="story-link" href="{{ story.url }}" target="_blank" rel="noopener" hidden>Read original ↗</a>
+                    <p class="detail-error" role="alert" hidden></p>
                 </div>
                 {% if context_enabled %}
                 <div class="story-context" hidden>
-                    <button class="expand-btn" onclick="toggleDetail(this)">Background</button>
+                    <button type="button" class="expand-btn" onclick="toggleDetail(this)">Background</button>
                     <div class="story-detail" hidden>
                         <p class="context-text"></p>
                     </div>
@@ -969,21 +1035,82 @@
             btn.textContent = isHidden ? 'Less' : btn.dataset.label;
         }
 
+        function setSummaryVisibility(btn, detailDiv, visible) {
+            detailDiv.hidden = !visible;
+            btn.textContent = visible ? 'Less' : 'More detail';
+            btn.setAttribute('aria-expanded', String(visible));
+        }
+
+        function getSummaryError(detailDiv) {
+            let errorText = detailDiv.querySelector('.detail-error');
+            if (!errorText) {
+                // Keep pages generated before this error state was added
+                // functional while they are waiting for a scheduled rebuild.
+                errorText = document.createElement('p');
+                errorText.className = 'detail-error';
+                errorText.setAttribute('role', 'alert');
+                errorText.hidden = true;
+                detailDiv.appendChild(errorText);
+            }
+            return errorText;
+        }
+
+        function renderSummary(btn, data) {
+            const card = btn.closest('.story-card');
+            const detailDiv = btn.nextElementSibling;
+            const detailText = detailDiv.querySelector('.detail-text');
+            const detail = data.detail;
+            if (!detail) throw new Error('No detailed summary was returned.');
+
+            if (data.brief) {
+                card.querySelector('.story-lede').textContent = data.brief;
+            }
+            detailText.textContent = detail;
+
+            const errorText = getSummaryError(detailDiv);
+            errorText.hidden = true;
+            errorText.textContent = '';
+
+            const contextWrapper = card.querySelector('.story-context');
+            if (contextWrapper && data.context) {
+                contextWrapper.querySelector('.context-text').textContent = data.context;
+                contextWrapper.hidden = false;
+            }
+
+            btn.dataset.loaded = '1';
+            btn.disabled = false;
+            setSummaryVisibility(btn, detailDiv, true);
+        }
+
         // Fetch AI summary on first click, then toggle like normal
         async function fetchSummary(btn) {
             const detailDiv = btn.nextElementSibling;
+            if (!detailDiv) return;
             const detailText = detailDiv.querySelector('.detail-text');
+            const errorText = getSummaryError(detailDiv);
 
             // Already loaded — just toggle
             if (btn.dataset.loaded) {
-                const isHidden = detailDiv.hidden;
-                detailDiv.hidden = !isHidden;
-                btn.textContent = isHidden ? 'Less' : 'More detail';
+                setSummaryVisibility(btn, detailDiv, detailDiv.hidden);
+                return;
+            }
+
+            // A summary generated during a previous refresh can be rendered
+            // without another network request.
+            if (btn.dataset.summaryDetail) {
+                renderSummary(btn, {
+                    brief: btn.dataset.summaryBrief,
+                    detail: btn.dataset.summaryDetail,
+                });
                 return;
             }
 
             btn.textContent = 'Loading…';
             btn.disabled = true;
+            detailText.textContent = 'Loading…';
+            errorText.hidden = true;
+            detailDiv.hidden = false;
+            btn.setAttribute('aria-expanded', 'true');
 
             const params = new URLSearchParams({
                 url: btn.dataset.url,
@@ -993,37 +1120,19 @@
 
             try {
                 const resp = await fetch(`/api/story/summarize?${params}`);
-                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                const data = await resp.json();
-
-                // Replace lede with AI brief
-                if (data.brief) {
-                    btn.closest('.story-card').querySelector('.story-lede').textContent = data.brief;
+                const data = await resp.json().catch(() => ({}));
+                if (!resp.ok) {
+                    throw new Error(data.error || `Summary unavailable (HTTP ${resp.status})`);
                 }
-
-                // Populate and show detail
-                if (data.detail) {
-                    detailText.textContent = data.detail;
-                }
-
-                // Show "Read original" link only if article was accessible
-                const link = detailDiv.querySelector('.story-link');
-                if (link) link.hidden = !data.accessible;
-
-                // Populate background context if present
-                const contextWrapper = btn.closest('.story-card').querySelector('.story-context');
-                if (contextWrapper && data.context) {
-                    contextWrapper.querySelector('.context-text').textContent = data.context;
-                    contextWrapper.hidden = false;
-                }
-
-                btn.dataset.loaded = '1';
-                btn.disabled = false;
-                detailDiv.hidden = false;
-                btn.textContent = 'Less';
+                renderSummary(btn, data);
             } catch (e) {
-                btn.textContent = 'More detail';
+                console.error('Could not load article summary:', e);
+                detailText.textContent = '';
+                errorText.textContent = e.message || 'Could not load the article summary.';
+                errorText.hidden = false;
                 btn.disabled = false;
+                btn.textContent = 'Try again';
+                btn.setAttribute('aria-expanded', 'true');
             }
         }
 
@@ -1043,6 +1152,8 @@
             let taskItems = [];
             let currentTaskDate = '';
             let taskFetchPromise = null;
+            let editingTaskId = null;
+            let editingDraft = '';
 
             function taskDateKey(date = new Date()) {
                 const parts = new Intl.DateTimeFormat('en-US', {
@@ -1064,6 +1175,17 @@
 
             function taskCountText(count) {
                 return `${count} open ${count === 1 ? 'task' : 'tasks'}`;
+            }
+
+            function closeEditingEditor() {
+                const openItem = document.querySelector('.task-item.editing');
+                if (openItem) {
+                    openItem.classList.remove('editing');
+                    const openForm = openItem.querySelector('.task-edit-form');
+                    if (openForm) openForm.hidden = true;
+                }
+                editingTaskId = null;
+                editingDraft = '';
             }
 
             function renderTaskList(list, empty, items) {
@@ -1113,7 +1235,108 @@
                     });
 
                     label.append(checkbox, indicator, text);
-                    item.appendChild(label);
+
+                    const editButton = document.createElement('button');
+                    editButton.type = 'button';
+                    editButton.className = 'task-edit';
+                    editButton.textContent = '✎';
+                    editButton.title = 'Edit task';
+                    editButton.setAttribute('aria-label', `Edit: ${task.text}`);
+
+                    const form = document.createElement('form');
+                    form.className = 'task-edit-form';
+                    form.hidden = true;
+
+                    const input = document.createElement('input');
+                    input.className = 'task-input task-edit-input';
+                    input.type = 'text';
+                    input.maxLength = 160;
+                    input.value = task.text;
+                    input.setAttribute('aria-label', 'Edit task text');
+
+                    const saveButton = document.createElement('button');
+                    saveButton.type = 'submit';
+                    saveButton.className = 'task-save';
+                    saveButton.textContent = '✓';
+                    saveButton.title = 'Save changes';
+                    saveButton.setAttribute('aria-label', `Save changes: ${task.text}`);
+
+                    const cancelButton = document.createElement('button');
+                    cancelButton.type = 'button';
+                    cancelButton.className = 'task-cancel';
+                    cancelButton.textContent = '✕';
+                    cancelButton.title = 'Discard changes';
+                    cancelButton.setAttribute('aria-label', `Discard changes: ${task.text}`);
+
+                    form.append(input, saveButton, cancelButton);
+
+                    function enterEditMode() {
+                        closeEditingEditor();
+                        editingTaskId = task.id;
+                        editingDraft = task.text;
+                        item.classList.add('editing');
+                        form.hidden = false;
+                        input.focus();
+                        const len = input.value.length;
+                        input.setSelectionRange(len, len);
+                    }
+
+                    function exitEditMode() {
+                        editingTaskId = null;
+                        editingDraft = '';
+                        item.classList.remove('editing');
+                        form.hidden = true;
+                    }
+
+                    editButton.addEventListener('click', enterEditMode);
+                    cancelButton.addEventListener('click', exitEditMode);
+
+                    input.addEventListener('keydown', event => {
+                        if (event.key === 'Escape') exitEditMode();
+                    });
+
+                    form.addEventListener('submit', async event => {
+                        event.preventDefault();
+                        const value = input.value.trim();
+                        if (!value || value === task.text) {
+                            exitEditMode();
+                            return;
+                        }
+
+                        input.disabled = true;
+                        saveButton.disabled = true;
+                        cancelButton.disabled = true;
+                        setTaskStatus('');
+                        try {
+                            const response = await fetch(`/api/tasks/${encodeURIComponent(task.id)}`, {
+                                method: 'PATCH',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({text: value}),
+                            });
+                            if (!response.ok) {
+                                const error = await response.json().catch(() => ({}));
+                                throw new Error(error.error || 'Could not update task.');
+                            }
+                            exitEditMode();
+                            await fetchTasks();
+                        } catch (error) {
+                            input.disabled = false;
+                            saveButton.disabled = false;
+                            cancelButton.disabled = false;
+                            setTaskStatus(error.message || 'Could not update task.');
+                            input.focus();
+                        }
+                    });
+
+                    item.append(label, editButton, form);
+
+                    // Re-open the editor across list re-renders (poll, other mutations).
+                    if (task.id === editingTaskId) {
+                        input.value = editingDraft;
+                        item.classList.add('editing');
+                        form.hidden = false;
+                    }
+
                     list.appendChild(item);
                 });
             }
@@ -1142,7 +1365,27 @@
                         const data = await response.json();
                         taskItems = Array.isArray(data.tasks) ? data.tasks : [];
                         currentTaskDate = taskDateKey();
+                        const activeInput = editingTaskId
+                            ? document.querySelector('.task-item.editing .task-edit-input') : null;
+                        const editorFocused = !!activeInput
+                            && document.activeElement === activeInput;
+                        if (activeInput) editingDraft = activeInput.value;
                         renderTasks();
+                        if (editingTaskId) {
+                            const restoredInput = document.querySelector(
+                                '.task-item.editing .task-edit-input');
+                            if (restoredInput) {
+                                if (editorFocused) {
+                                    restoredInput.focus();
+                                    const len = restoredInput.value.length;
+                                    restoredInput.setSelectionRange(len, len);
+                                }
+                            } else {
+                                // The task being edited no longer exists.
+                                editingTaskId = null;
+                                editingDraft = '';
+                            }
+                        }
                         setTaskStatus('');
                     } catch (error) {
                         if (!currentTaskDate) {

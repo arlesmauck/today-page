@@ -135,8 +135,17 @@ def create_task(text: str) -> dict:
         return task
 
 
-def set_task_completed(task_id: str, completed: bool) -> dict | None:
-    """Set a task's completion state, or return None when it no longer exists."""
+def update_task(task_id: str, text: str | None = None, completed: bool | None = None) -> dict | None:
+    """Update a task's text and/or completion state, or return None when it no longer exists."""
+    new_text = None
+    if text is not None:
+        value = text.strip()
+        if not value:
+            raise ValueError("Task text must not be empty")
+        if len(value) > MAX_TASK_LENGTH:
+            raise ValueError(f"Task text must be {MAX_TASK_LENGTH} characters or fewer")
+        new_text = value
+
     with _TASKS_LOCK:
         today = _today()
         tasks = _clean_tasks(_read_tasks_unlocked(), today)
@@ -144,7 +153,10 @@ def set_task_completed(task_id: str, completed: bool) -> dict | None:
         if task is None:
             return None
 
-        task["completed"] = completed
-        task["completedDate"] = today.isoformat() if completed else None
+        if new_text is not None:
+            task["text"] = new_text
+        if completed is not None:
+            task["completed"] = completed
+            task["completedDate"] = today.isoformat() if completed else None
         _write_tasks_unlocked(tasks)
         return task
