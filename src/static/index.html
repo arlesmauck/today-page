@@ -178,7 +178,8 @@
             font-style: italic;
             padding: 0.35rem 0 0.1rem;
         }
-        .task-edit {
+        .task-edit,
+        .task-delete {
             flex: none;
             display: inline-flex;
             align-items: center;
@@ -197,8 +198,11 @@
         }
         .task-edit:hover { background: #f0ede6; color: #4a4540; }
         .task-edit:focus-visible { outline: 2px solid #b0a898; outline-offset: 1px; }
+        .task-delete:hover { background: #f0ede6; color: #a05a4a; }
+        .task-delete:focus-visible { outline: 2px solid #b0a898; outline-offset: 1px; }
         .task-item.editing > label,
-        .task-item.editing > .task-edit { display: none; }
+        .task-item.editing > .task-edit,
+        .task-item.editing > .task-delete { display: none; }
         .task-edit-form {
             flex: 1;
             min-width: 0;
@@ -1190,6 +1194,31 @@
                     editButton.addEventListener('click', enterEditMode);
                     cancelButton.addEventListener('click', exitEditMode);
 
+                    const deleteButton = document.createElement('button');
+                    deleteButton.type = 'button';
+                    deleteButton.className = 'task-delete';
+                    deleteButton.textContent = '✕';
+                    deleteButton.title = 'Delete task';
+                    deleteButton.setAttribute('aria-label', `Delete: ${task.text}`);
+
+                    deleteButton.addEventListener('click', async () => {
+                        deleteButton.disabled = true;
+                        setTaskStatus('');
+                        try {
+                            const response = await fetch(`/api/tasks/${encodeURIComponent(task.id)}`, {
+                                method: 'DELETE',
+                            });
+                            if (!response.ok) {
+                                const error = await response.json().catch(() => ({}));
+                                throw new Error(error.error || 'Could not delete task.');
+                            }
+                            await fetchTasks();
+                        } catch (error) {
+                            deleteButton.disabled = false;
+                            setTaskStatus(error.message || 'Could not delete task.');
+                        }
+                    });
+
                     input.addEventListener('keydown', event => {
                         if (event.key === 'Escape') exitEditMode();
                     });
@@ -1227,7 +1256,7 @@
                         }
                     });
 
-                    item.append(label, editButton, form);
+                    item.append(label, editButton, deleteButton, form);
 
                     // Re-open the editor across list re-renders (poll, other mutations).
                     if (task.id === editingTaskId) {

@@ -124,7 +124,7 @@ Any variable matching `NEWS_FEED_*_URL` is loaded; the label comes from the vari
 
 ## Tasks
 
-The page includes a small task list: type a task, check it off when done, and click the pencil (or press Enter in the editor) to edit its text. Today's tasks are listed first; tasks from earlier in the week appear in a collapsed panel below.
+The page includes a small task list: type a task, check it off when done, click the pencil (or press Enter in the editor) to edit its text, and click the ✕ to delete it outright. Today's tasks are listed first; tasks from earlier in the week appear in a collapsed panel below.
 
 Tasks clean themselves up — completed tasks disappear at the end of their day, and anything still unfinished is cleared at the end of its week (Monday-based). Everything lives in `data/tasks.json`.
 
@@ -182,6 +182,7 @@ volumes:
 | `GET /api/tasks` | Persisted task list |
 | `POST /api/tasks` | Create a task |
 | `PATCH /api/tasks/{id}` | Update a task's text and/or completion state |
+| `DELETE /api/tasks/{id}` | Delete a task |
 | `GET /api/config/settings` | Effective settings (env defaults + `settings.json`) |
 | `POST /api/config/settings` | Validate and save settings |
 | `DELETE /api/config/settings` | Revert to env defaults |

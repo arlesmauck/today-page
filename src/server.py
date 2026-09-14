@@ -23,7 +23,7 @@ from src.fetcher import load_weather, refresh_weather
 from src.calendar import effective_calendars, load_calendar
 from src.news import editable_feeds, effective_categories, load_news, news_categories
 from src.builder import write_page
-from src.tasks import MAX_TASK_LENGTH, create_task, load_tasks, update_task
+from src.tasks import MAX_TASK_LENGTH, create_task, delete_task, load_tasks, update_task
 from src.scheduler import refresh_now
 
 logger = logging.getLogger("server")
@@ -144,6 +144,14 @@ async def patch_task(task_id: str, request: Request):
     if task is None:
         return JSONResponse(status_code=404, content={"error": "Task not found"})
     return {"task": task}
+
+
+@app.delete("/api/tasks/{task_id}")
+async def remove_task(task_id: str):
+    """Delete a task."""
+    if not delete_task(task_id):
+        return JSONResponse(status_code=404, content={"error": "Task not found"})
+    return {"ok": True}
 
 
 @app.get("/api/news")

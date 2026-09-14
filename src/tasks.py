@@ -160,3 +160,15 @@ def update_task(task_id: str, text: str | None = None, completed: bool | None = 
             task["completedDate"] = today.isoformat() if completed else None
         _write_tasks_unlocked(tasks)
         return task
+
+
+def delete_task(task_id: str) -> bool:
+    """Remove a task by id, returning False when it no longer exists."""
+    with _TASKS_LOCK:
+        today = _today()
+        tasks = _clean_tasks(_read_tasks_unlocked(), today)
+        remaining = [item for item in tasks if item["id"] != task_id]
+        if len(remaining) == len(tasks):
+            return False
+        _write_tasks_unlocked(remaining)
+        return True
