@@ -8,124 +8,1687 @@
     <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        :root { font-size: 17px; }
         body {
             font-family: 'Crimson Text', Georgia, serif;
             color: #2d2d2d;
             background: #f7f5f0;
             line-height: 1.7;
             -webkit-font-smoothing: antialiased;
+            min-height: 100vh;
+            padding: 4rem 1.5rem;
         }
-        .sans { font-family: 'Inter', sans-serif; }
-        .paper-shadow {
+        .page {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        .content-layout {
+            display: grid;
+            grid-template-columns: 380px 1fr 320px;
+            gap: 2.5rem;
+            align-items: start;
+        }
+        @media (max-width: 1200px) {
+            .content-layout {
+                grid-template-columns: 380px 1fr;
+            }
+            .right-col {
+                grid-column: 1 / -1;
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 1rem;
+            }
+        }
+        @media (max-width: 800px) {
+            .content-layout {
+                grid-template-columns: 1fr;
+            }
+            .right-col {
+                grid-column: auto;
+                display: block;
+            }
+        }
+        /* Task tracker */
+        .task-panel {
+            background: #fff;
             box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06);
+            padding: 1.25rem;
+            margin-bottom: 1rem;
         }
+        .task-panel:last-child { margin-bottom: 0; }
+        .task-panel-older {
+            background: rgba(255,255,255,0.72);
+        }
+        .task-panel-header {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        .task-panel-header .section-title { margin-bottom: 0; }
+        .task-count {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.8rem;
+            color: #b0a898;
+            white-space: nowrap;
+        }
+        .task-form {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .task-input {
+            flex: 1;
+            min-width: 0;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.8rem;
+            color: #2d2d2d;
+            background: #fff;
+            border: 1px solid #e0dcd4;
+            border-radius: 4px;
+            padding: 0.55rem 0.65rem;
+        }
+        .task-input::placeholder { color: #b8b0a4; }
+        .task-input:focus { outline: 1px solid #b0a898; }
+        .task-add {
+            flex: none;
+            width: 2.1rem;
+            border: 1px solid #2d2d2d;
+            border-radius: 4px;
+            background: #2d2d2d;
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            font-size: 1.1rem;
+            line-height: 1;
+            cursor: pointer;
+        }
+        .task-add:hover { background: #4a4540; }
+        .task-list {
+            list-style: none;
+            margin: 0;
+        }
+        .task-item {
+            border-bottom: 1px solid #f0ede6;
+            padding: 0.65rem 0;
+        }
+        .task-item:last-child { border-bottom: none; }
+        .task-item > label {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.65rem;
+            cursor: pointer;
+        }
+        .task-item input {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+        }
+        .task-checkbox {
+            flex: none;
+            width: 1rem;
+            height: 1rem;
+            border: 1px solid #c8c0b4;
+            border-radius: 50%;
+            margin-top: 0.15rem;
+            position: relative;
+        }
+        .task-item input:checked + .task-checkbox {
+            border-color: #a09080;
+            background: #a09080;
+        }
+        .task-item input:checked + .task-checkbox::after {
+            content: '';
+            position: absolute;
+            left: 0.26rem;
+            top: 0.1rem;
+            width: 0.28rem;
+            height: 0.5rem;
+            border: solid #fff;
+            border-width: 0 1px 1px 0;
+            transform: rotate(45deg);
+        }
+        .task-item input:focus-visible + .task-checkbox {
+            outline: 2px solid #b0a898;
+            outline-offset: 2px;
+        }
+        .task-text {
+            min-width: 0;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.8rem;
+            line-height: 1.45;
+            color: #4a4540;
+            overflow-wrap: anywhere;
+        }
+        .task-item input:checked ~ .task-text {
+            color: #b0a898;
+            text-decoration: line-through;
+            text-decoration-thickness: 1px;
+        }
+        .task-empty {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.75rem;
+            color: #b0a898;
+            font-style: italic;
+            padding: 0.35rem 0 0.1rem;
+        }
+        .task-status {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.72rem;
+            color: #a05a4a;
+            margin-top: 0.6rem;
+            line-height: 1.4;
+        }
+        .task-status:empty { display: none; }
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+        .task-panel[hidden] { display: none; }
+        .sans { font-family: 'Inter', sans-serif; }
+
+        /* Masthead */
+        header {
+            text-align: center;
+            margin-bottom: 3.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid #e8e4dc;
+        }
+        .date-line {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.25em;
+            color: #aaa;
+            margin-bottom: 0.5rem;
+        }
+        h1 {
+            font-family: 'Crimson Text', serif;
+            font-size: 2.75rem;
+            font-weight: 400;
+            letter-spacing: -0.5px;
+            color: #2d2d2d;
+        }
+        .masthead-rule {
+            width: 4rem;
+            height: 1px;
+            background: #d0ccc4;
+            margin: 1.5rem auto 0;
+        }
+
+        /* Section title */
         .section-title {
             font-family: 'Inter', sans-serif;
             font-size: 0.7rem;
             text-transform: uppercase;
             letter-spacing: 0.15em;
-            color: #999;
-            margin-bottom: 1.5rem;
+            color: #aaa;
+            margin-bottom: 1.25rem;
+            font-weight: 500;
         }
+
+        /* Cards */
+        .card {
+            background: #fff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06);
+            padding: 1.75rem;
+            margin-bottom: 2rem;
+        }
+
+        /* Weather */
+        .weather-row {
+            display: flex;
+            align-items: baseline;
+            gap: 1rem;
+        }
+        .weather-temp {
+            font-size: 3.5rem;
+            font-weight: 300;
+            line-height: 1;
+        }
+        .weather-desc {
+            font-family: 'Inter', sans-serif;
+            font-size: 1.1rem;
+            color: #888;
+        }
+        .weather-meta {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+            color: #aaa;
+            margin-top: 0.5rem;
+            display: flex;
+            gap: 1.25rem;
+        }
+
+        .forecast-row {
+            display: flex;
+            gap: 0;
+            margin-top: 1.1rem;
+            border-top: 1px solid #e8e4dc;
+            padding-top: 0.9rem;
+        }
+        .forecast-day {
+            flex: 1;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+        .forecast-day-name {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #aaa;
+        }
+        .forecast-temp {
+            font-size: 1.1rem;
+            font-weight: 300;
+            color: #3a3530;
+        }
+        .forecast-desc {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.68rem;
+            color: #bbb;
+            line-height: 1.3;
+        }
+
+        /* Events */
+        .event {
+            display: flex;
+            gap: 1.25rem;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #f0ede6;
+        }
+        .event:last-child { border-bottom: none; }
+        .event-time {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+            color: #8b7355;
+            font-weight: 500;
+            min-width: 4.5rem;
+            text-align: right;
+        }
+        .event-title {
+            font-size: 1.1rem;
+        }
+        .empty-msg {
+            color: #aaa;
+            font-style: italic;
+        }
+        .lookahead {
+            margin-top: 1.25rem;
+            padding-top: 1.25rem;
+            border-top: 1px solid #e8e4dc;
+        }
+        .event-time.empty-label {
+            visibility: hidden;
+        }
+
+        /* Morning briefing */
+        .morning-briefing {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid #e8e4dc;
+        }
+        .briefing-text {
+            font-size: 1.2rem;
+            line-height: 1.7;
+            color: #4a4540;
+            font-style: italic;
+        }
+
+        /* News tabs */
+        .tabs {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #e8e4dc;
+        }
+        .tab {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+            color: #aaa;
+            cursor: pointer;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid transparent;
+            user-select: none;
+        }
+        .tab.active {
+            color: #2d2d2d;
+            border-bottom-color: #2d2d2d;
+        }
+
+        /* Story cards */
         .story-card {
-            padding: 2rem 0;
+            padding: 1.5rem 0;
             border-bottom: 1px solid #e8e4dc;
             transition: background 0.2s;
         }
-        .story-card:hover { background: rgba(255,255,255,0.5); }
+        .story-card:hover { background: rgba(255,255,255,0.4); }
         .story-card:last-child { border-bottom: none; }
-        .story-headline {
-            font-size: 1.5rem;
-            line-height: 1.3;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: #2d2d2d;
-        }
-        .story-lede {
-            font-size: 1.05rem;
-            color: #555;
-            line-height: 1.6;
-        }
         .story-source {
             font-family: 'Inter', sans-serif;
             font-size: 0.7rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            color: #aaa;
-            margin-bottom: 0.5rem;
+            color: #bbb;
+            margin-bottom: 0.4rem;
         }
-        .weather-big { font-size: 3rem; font-weight: 300; line-height: 1; }
+        .story-headline {
+            font-size: 1.35rem;
+            line-height: 1.3;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #2d2d2d;
+            cursor: pointer;
+            transition: color 0.2s;
+            text-decoration: none;
+            display: block;
+        }
+        .story-headline:hover { color: #8b7355; }
+        .story-lede {
+            font-size: 1rem;
+            color: #666;
+            line-height: 1.6;
+        }
+        .expand-btn {
+            background: none;
+            border: none;
+            font-family: inherit;
+            font-size: 0.8rem;
+            color: #a09080;
+            cursor: pointer;
+            padding: 0;
+            margin-top: 0.5rem;
+            text-decoration: underline;
+            text-decoration-style: dotted;
+            text-underline-offset: 2px;
+        }
+        .expand-btn:hover { color: #8b7355; }
+        .story-detail {
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid #e8e4dc;
+            font-size: 0.95rem;
+            line-height: 1.65;
+            color: #444;
+        }
+        .story-link {
+            display: inline-block;
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            color: #a09080;
+            text-decoration: none;
+        }
+        .story-link:hover { color: #8b7355; text-decoration: underline; }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e8e4dc;
+        }
+        footer p {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.75rem;
+            color: #bbb;
+        }
+        footer .tagline {
+            margin-top: 0.5rem;
+            color: #ccc;
+        }
+        .settings-btn {
+            background: none;
+            border: none;
+            font-size: 1rem;
+            color: #ccc;
+            cursor: pointer;
+            margin-top: 0.75rem;
+            padding: 0;
+            line-height: 1;
+        }
+        .settings-btn:hover { color: #aaa; }
+
+        /* Settings overlay */
+        .settings-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(247,245,240,0.92);
+            z-index: 100;
+            overflow-y: auto;
+            padding: 3rem 1.5rem;
+        }
+        .settings-backdrop.open { display: block; }
+        .settings-panel {
+            max-width: 680px;
+            margin: 0 auto;
+        }
+        .settings-panel h3 {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: #aaa;
+            margin-bottom: 1.5rem;
+        }
+        .settings-field { margin-bottom: 1.5rem; }
+        .settings-field label {
+            display: block;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.75rem;
+            color: #888;
+            margin-bottom: 0.4rem;
+        }
+        .settings-field textarea {
+            width: 100%;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+            color: #2d2d2d;
+            background: #fff;
+            border: 1px solid #e0dcd4;
+            border-radius: 4px;
+            padding: 0.75rem;
+            resize: vertical;
+            line-height: 1.55;
+        }
+        .settings-field textarea:focus { outline: 1px solid #b0a898; }
+        .settings-actions {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+        .settings-actions button {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.8rem;
+            padding: 0.45rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 1px solid #d0ccc4;
+            background: #f7f5f0;
+            color: #555;
+        }
+        .settings-actions button:hover { background: #ece9e3; }
+        .settings-actions .btn-primary {
+            background: #2d2d2d;
+            color: #f7f5f0;
+            border-color: #2d2d2d;
+        }
+        .settings-actions .btn-primary:hover { background: #444; }
+        #settings-status {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.8rem;
+            margin-top: 0.75rem;
+            color: #888;
+        }
+        .settings-section {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: #b0a898;
+            border-top: 1px solid #e8e4dc;
+            padding-top: 1.25rem;
+            margin: 2rem 0 1rem;
+        }
+        .settings-field input {
+            width: 100%;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+            color: #2d2d2d;
+            background: #fff;
+            border: 1px solid #e0dcd4;
+            border-radius: 4px;
+            padding: 0.55rem 0.75rem;
+            box-sizing: border-box;
+        }
+        .settings-field input:focus { outline: 1px solid #b0a898; }
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 0 1rem;
+        }
+        .dyn-row {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.6rem;
+            align-items: center;
+        }
+        .dyn-row .dyn-input {
+            flex: 1;
+            min-width: 0;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+            color: #2d2d2d;
+            background: #fff;
+            border: 1px solid #e0dcd4;
+            border-radius: 4px;
+            padding: 0.55rem 0.75rem;
+        }
+        .dyn-row .dyn-input:focus { outline: 1px solid #b0a898; }
+        .dyn-row .dyn-cat { flex: 0 0 160px; }
+        .dyn-row .dyn-remove {
+            flex: none;
+            border: none;
+            background: none;
+            color: #c0b8a8;
+            font-size: 0.9rem;
+            cursor: pointer;
+            padding: 0.25rem;
+            line-height: 1;
+        }
+        .dyn-row .dyn-remove:hover { color: #a05a4a; }
+        .add-row-btn {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.78rem;
+            color: #8b7355;
+            background: none;
+            border: 1px dashed #d0ccc4;
+            border-radius: 4px;
+            padding: 0.4rem 0.8rem;
+            cursor: pointer;
+        }
+        .add-row-btn:hover { background: #ece9e3; }
+        .settings-hint {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.72rem;
+            color: #b0a898;
+            margin-top: 0.4rem;
+            line-height: 1.5;
+        }
+        .settings-check {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .settings-check label {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.82rem;
+            color: #4a4540;
+        }
+        .quality-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.4rem;
+        }
+        .quality-row .quality-name {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.82rem;
+            color: #4a4540;
+        }
+        .quality-row select {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.8rem;
+            color: #2d2d2d;
+            border: 1px solid #e0dcd4;
+            border-radius: 4px;
+            padding: 0.3rem 0.5rem;
+            background: #fff;
+        }
+        .story-reason {
+            font-size: 0.72rem;
+            color: #b0a898;
+            margin-bottom: 0.15rem;
+            font-style: italic;
+            letter-spacing: 0.01em;
+        }
     </style>
 </head>
-<body class="min-h-screen">
-    <div class="max-w-2xl mx-auto px-8 py-16">
+<body>
+    <div class="page">
         <!-- Masthead -->
-        <header class="text-center mb-16 fade-in">
-            <p class="sans text-xs uppercase tracking-[0.3em] text-gray-400 mb-2">Thursday, May 14, 2026</p>
-            <h1 class="text-5xl font-normal tracking-tight text-gray-800" style="font-family: 'Crimson Text', serif;">Good Morning, Arles</h1>
-            <div class="w-16 h-px bg-gray-300 mx-auto mt-6"></div>
+        <header>
+            <p class="date-line">Sunday, September 13, 2026</p>
+            <h1>Good Evening, Friend</h1>
+            <div class="masthead-rule"></div>
         </header>
 
+        <div class="content-layout">
+        <div class="left-col">
         <!-- Weather -->
-        <section class="mb-16">
-            <div class="paper-shadow bg-white rounded-sm p-8">
-                <div class="flex items-start justify-between">
-                    <div>
-                        <p class="section-title">Denver, CO</p>
-                        <div class="flex items-baseline gap-4">
-                            <span class="weather-big">62°</span>
-                            <span class="text-lg text-gray-500">Mostly sunny</span>
-                        </div>
-                        <div class="sans text-sm text-gray-400 mt-2 flex gap-4">
-                            <span>H: 78°</span>
-                            <span>Wind 8 mph</span>
-                        </div>
-                    </div>
-                </div>
+        <section class="card">
+            <p class="section-title">Denver, CO</p>
+            <div class="weather-row">
+                <span class="weather-temp">62°</span>
+                <span class="weather-desc">Mostly sunny</span>
             </div>
+            <div class="weather-meta sans">
+
+                <span>Wind 8 mph</span>
+                <span>Humidity 18%</span>
+            </div>
+
         </section>
 
         <!-- Calendar -->
-        <section class="mb-16">
-            <div class="paper-shadow bg-white rounded-sm p-8">
-                <p class="section-title">What's Happening Today</p>
-                <div class="space-y-3">
-                    
-                    
-                    <p class="text-gray-400 italic">Nothing scheduled today.</p>
-                    
-                </div>
-            </div>
+        <section class="card">
+            <p class="section-title">What's Happening Today</p>
+
+
+            <p class="empty-msg">Nothing scheduled today.</p>
+
+
+
+
+
         </section>
+        </div><!-- /.left-col -->
 
         <!-- News -->
-        <section class="mb-16">
-            <div class="flex gap-6 mb-8 border-b border-gray-200">
-                <span class="tab active">World</span>
-                <span class="tab">Science & Tech</span>
-                <span class="tab">Denver</span>
-            </div>
-            <div>
-                
-                <div class="story-card">
-                    <p class="story-source">Reuters · 2 hours ago</p>
-                    <h2 class="story-headline">House Passes Revised Aerospace Funding Bill</h2>
-                    <p class="story-lede">Bipartisan support for a $28 billion package focused on small satellite launch infrastructure.</p>
-                </div>
-                
-                <div class="story-card">
-                    <p class="story-source">AP News · 4 hours ago</p>
-                    <h2 class="story-headline">NOAA Forecasts Quieter-Than-Average Hurricane Season</h2>
-                    <p class="story-lede">Forecasters predict 11 named storms, below the 14-storm average.</p>
-                </div>
-                
-            </div>
-        </section>
+        <section>
 
-        <footer class="text-center py-12 border-t border-gray-200">
-            <p class="sans text-xs text-gray-400 tracking-wide">Updated at 9:10 PM</p>
-            <p class="sans text-xs text-gray-300 mt-2 italic">"No algorithms. No clickbait. Just what matters."</p>
+
+            <div class="tabs">
+
+                <span class="tab active" data-cat="World">World</span>
+
+                <span class="tab " data-cat="Technology">Technology</span>
+
+                <span class="tab " data-cat="Science">Science</span>
+
+                <span class="tab " data-cat="Health">Health</span>
+
+                <span class="tab " data-cat="US">US</span>
+
+                <span class="tab " data-cat="Local">Local</span>
+
+            </div>
+
+
+
+
+            <div class="story-card" data-category="World">
+                <p class="story-source">BBC News</p>
+                <p class="story-headline">Palestinian parents fear for children's lives at school as settler attacks grow</p>
+
+                <p class="story-reason sans">Settler attacks on Palestinian schools risk children's lives and safety.</p>
+
+                <p class="story-lede">A headteacher in the occupied West Bank has installed new barbed wire fencing after three pupils were killed this year.</p>
+
+                <a class="story-link" href="https://www.bbc.co.uk/news/articles/c3wj45g73g1o?at_medium=RSS&at_campaign=rss" target="_blank" rel="noopener">Read more ↗</a>
+
+            </div>
+
+            <div class="story-card" data-category="World">
+                <p class="story-source">BBC News</p>
+                <p class="story-headline">Germany's far-right AfD says 'democracy demands' parties work with them after state election win</p>
+
+                <p class="story-reason sans">Germany's far-right AfD seeks coalition after significant state election win.</p>
+
+                <p class="story-lede">The far-right party is trying to form a government in the state after falling three seats short of a majority.</p>
+
+                <a class="story-link" href="https://www.bbc.co.uk/news/articles/cpd0113082eo?at_medium=RSS&at_campaign=rss" target="_blank" rel="noopener">Read more ↗</a>
+
+            </div>
+
+            <div class="story-card" data-category="World">
+                <p class="story-source">BBC News</p>
+                <p class="story-headline">Israeli strikes in southern Lebanese village kill 12</p>
+
+                <p class="story-reason sans">Israeli strikes in Lebanon kill 12, jeopardizing ceasefire efforts.</p>
+
+                <p class="story-lede">Lebanon says a recent Israeli escalation is jeopardising a US-brokered ceasefire meant to end the conflict between Israel and Hezbollah.</p>
+
+                <a class="story-link" href="https://www.bbc.co.uk/news/articles/c5yl96vz0edo?at_medium=RSS&at_campaign=rss" target="_blank" rel="noopener">Read more ↗</a>
+
+            </div>
+
+            <div class="story-card" data-category="Technology">
+                <p class="story-source">Biz & IT - Ars Technica</p>
+                <p class="story-headline">OpenAI agents discussed ways to escape their sandbox on public wiki</p>
+
+                <p class="story-reason sans">OpenAI agents discussed escaping sandbox limits on public wiki.</p>
+
+                <p class="story-lede">In all, 3,700 internal agents posted 18,000 messages discussing cheating on a test.</p>
+
+                <a class="story-link" href="https://arstechnica.com/security/2026/09/openai-agents-discussed-ways-to-escape-their-sandbox-on-public-wiki/" target="_blank" rel="noopener">Read more ↗</a>
+
+            </div>
+
+            <div class="story-card" data-category="Technology">
+                <p class="story-source">Biz & IT - Ars Technica</p>
+                <p class="story-headline">Once popular for attacking AI, ASCII smuggling is embraced by spammers</p>
+
+                <p class="story-reason sans">ASCII smuggling technique, once for AI attacks, now used by spammers.</p>
+
+                <p class="story-lede">A once-overlooked block of unicode that's invisible to humans is gaining ever wider use.</p>
+
+                <a class="story-link" href="https://arstechnica.com/security/2026/09/once-popular-for-attacking-ai-ascii-smuggling-is-embraced-by-spammers/" target="_blank" rel="noopener">Read more ↗</a>
+
+            </div>
+
+            <div class="story-card" data-category="Technology">
+                <p class="story-source">Biz & IT - Ars Technica</p>
+                <p class="story-headline">Claude, Codex, and Hermes installed unowned code inside corporate networks</p>
+
+                <p class="story-reason sans">AI models installed unowned code, posing security risks in networks.</p>
+
+                <p class="story-lede">227 install commands were found in corporate docs pointing at code nobody owns.</p>
+
+                <a class="story-link" href="https://arstechnica.com/security/2026/08/claude-codex-and-hermes-installed-unowned-code-inside-corporate-networks/" target="_blank" rel="noopener">Read more ↗</a>
+
+            </div>
+
+            <div class="story-card" data-category="Science">
+                <p class="story-source">All Top News -- ScienceDaily</p>
+                <p class="story-headline">Popular brain supplement linked to shorter lifespan in men</p>
+
+                <p class="story-reason sans">Brain supplement tyrosine linked to shorter lifespan in men.</p>
+
+                <p class="story-lede">A large study involving more than 270,000 people has linked higher blood levels of the amino acid tyrosine to a shorter lifespan in men. Using both observational data and genetic analysis,…</p>
+
+                <a class="story-link" href="https://www.sciencedaily.com/releases/2026/09/260904000330.htm" target="_blank" rel="noopener">Read more ↗</a>
+
+            </div>
+
+            <div class="story-card" data-category="Science">
+                <p class="story-source">All Top News -- ScienceDaily</p>
+                <p class="story-headline">A longer exhale may push your brain toward bolder decisions</p>
+
+                <p class="story-reason sans">Extended exhales may encourage bolder decisions by affecting brain reward sensitivity.</p>
+
+                <p class="story-lede">Slow breathing with a prolonged exhale made people more willing to take risks by changing heart activity and increasing the brain’s sensitivity to rewards. The findings suggest that something as…</p>
+
+                <a class="story-link" href="https://www.sciencedaily.com/releases/2026/09/260904000320.htm" target="_blank" rel="noopener">Read more ↗</a>
+
+            </div>
+
+            <div class="story-card" data-category="Science">
+                <p class="story-source">All Top News -- ScienceDaily</p>
+                <p class="story-headline">Life uses 4 DNA letters. Scientists just made 8 work</p>
+
+                <p class="story-reason sans">Scientists created a functional eight-letter DNA alphabet, doubling nature's capacity.</p>
+
+                <p class="story-lede">Researchers at UC San Diego have demonstrated that a key cellular enzyme can accurately read an eight-letter genetic alphabet, doubling the four letters used by all known life on Earth. Detailed…</p>
+
+                <a class="story-link" href="https://www.sciencedaily.com/releases/2026/09/260904000310.htm" target="_blank" rel="noopener">Read more ↗</a>
+
+            </div>
+
+            <div class="story-card" data-category="Health">
+                <p class="story-source">BBC News</p>
+                <p class="story-headline">How hunger for a new weight-loss drug is feeding an industry of fakes</p>
+
+                <p class="story-reason sans">Industry of fake weight-loss drugs emerges amid demand for new medications.</p>
+
+                <p class="story-lede">Dupes of retatrutide are flooding the black market, but the drug is yet to be approved by regulators.</p>
+
+                <a class="story-link" href="https://www.bbc.co.uk/news/articles/cwyz7lrwqdyo?at_medium=RSS&at_campaign=rss" target="_blank" rel="noopener">Read more ↗</a>
+
+            </div>
+
+            <div class="story-card" data-category="Health">
+                <p class="story-source">BBC News</p>
+                <p class="story-headline">Transplanted pig kidney works in US man's body for record 271 days</p>
+
+                <p class="story-reason sans">Transplanted pig kidney functions in a patient for a record nine months.</p>
+
+                <p class="story-lede">A man has lived for a record nine months with a transplanted pig kidney while waiting for a human transplant.</p>
+
+                <a class="story-link" href="https://www.bbc.co.uk/news/articles/c305qn2jeggo?at_medium=RSS&at_campaign=rss" target="_blank" rel="noopener">Read more ↗</a>
+
+            </div>
+
+            <div class="story-card" data-category="Health">
+                <p class="story-source">BBC News</p>
+                <p class="story-headline">Urine test can spot more than nine in 10 bladder cancers</p>
+
+                <p class="story-reason sans">Urine test shows over 90% accuracy in detecting bladder cancers.</p>
+
+                <p class="story-lede">The NHS has been trialling the test and says the results so far are truly promising.</p>
+
+                <a class="story-link" href="https://www.bbc.co.uk/news/articles/crr40g71vylo?at_medium=RSS&at_campaign=rss" target="_blank" rel="noopener">Read more ↗</a>
+
+            </div>
+
+            <div class="story-card" data-category="US">
+                <p class="story-source">NPR Topics: News</p>
+                <p class="story-headline">'Her body temperature was 106': How heat is killing Americans in their homes</p>
+
+                <p class="story-reason sans">Extreme heat is killing Americans in their homes, especially those in manufactured housing.</p>
+
+                <p class="story-lede">Heat kills thousands of people across the U.S. every year. The risk is especially high for the millions of Americans who live in manufactured housing like mobile homes and trailers.</p>
+
+                <a class="story-link" href="https://www.npr.org/2026/09/07/nx-s1-5644782/heat-deaths-manufactured-mobile-homes" target="_blank" rel="noopener">Read more ↗</a>
+
+            </div>
+
+            <div class="story-card" data-category="US">
+                <p class="story-source">NPR Topics: News</p>
+                <p class="story-headline">Investigators seek answers after Amazon cargo plane crash kills five at Miami airport</p>
+
+                <p class="story-reason sans">Amazon cargo plane crash kills five at Miami International Airport.</p>
+
+                <p class="story-lede">An Amazon Prime cargo plane was landing at the airport around 2 p.m. ET on Sunday when it overran the runway, crashed and rammed into vehicles on the ground, according to FAA.</p>
+
+                <a class="story-link" href="https://www.npr.org/2026/09/06/nx-s1-5959749/amazon-cargo-plane-crashes-at-miami-airport" target="_blank" rel="noopener">Read more ↗</a>
+
+            </div>
+
+            <div class="story-card" data-category="US">
+                <p class="story-source">NPR Topics: News</p>
+                <p class="story-headline">American Muslims are giving Texas barbecue a halal makeover</p>
+
+                <p class="story-reason sans">American Muslims are creating halal versions of Texas barbecue.</p>
+
+                <p class="story-lede">Even as anti-Muslim rhetoric rises in Texas, Muslim pitmasters are winning over diners and reshaping one of the state's most iconic culinary traditions.</p>
+
+                <a class="story-link" href="https://www.npr.org/2026/09/06/nx-s1-5927184/american-muslims-are-giving-texas-barbecue-a-halal-makeover" target="_blank" rel="noopener">Read more ↗</a>
+
+            </div>
+
+            <div class="story-card" data-category="Local">
+                <p class="story-source">Colorado Springs Gazette</p>
+                <p class="story-headline">Colorado student protest over ICE turns violent in Denver</p>
+
+                <p class="story-reason sans">Colorado student protest over ICE in Denver turned violent.</p>
+
+                <p class="story-lede">Colorado student protest over ICE turns violent in Denver&nbsp;&nbsp;Colorado Springs Gazette</p>
+
+                <a class="story-link" href="https://news.google.com/rss/articles/CBMikwFBVV95cUxNN0M3dWhMQXNtbGNwNWtRVDBWYkJzLVBaYTBDNXZ0RTBEcmNZeko4NXJWMjNhU0VTNXZ1OHNIb09RTV9PdGpEdThsYVE4VVR5Wl96dEw5aFVBX2R5c0pscnBkN05JbWxZcDFxcWxxT3lJZjNtSnZfTkNqVlhlSmExV19sLXR6NjBHM2JHZFV5am0zR3M?oc=5" target="_blank" rel="noopener">Read more ↗</a>
+
+            </div>
+
+            <div class="story-card" data-category="Local">
+                <p class="story-source">The Denver Post</p>
+                <p class="story-headline">Colorado students can be expelled for social media posts after-hours</p>
+
+                <p class="story-reason sans">Colorado students face expulsion for after-hours social media posts.</p>
+
+                <p class="story-lede">Colorado students can be expelled for social media posts after-hours&nbsp;&nbsp;The Denver Post</p>
+
+                <a class="story-link" href="https://news.google.com/rss/articles/CBMilgFBVV95cUxPY291ajYzZlJkRG1hdGZSN1lJVlI0SGtXTGpSNHNlNVBiU0dJbHNmTkY4VkhUNDU3aHkyZXFWR0p1NXU3eF9BUl9UT09nWExCaGt3emxBLVMyQkhwS0ZjdFY1MEhMY3J3UDlFalpUWUlMN1VpNXhTVUZkMUxKb21HSnhDaUlLbGFiZ3RUZDRPZjl5YkhDWnc?oc=5" target="_blank" rel="noopener">Read more ↗</a>
+
+            </div>
+
+            <div class="story-card" data-category="Local">
+                <p class="story-source">Denver7</p>
+                <p class="story-headline">Hundreds of students across Colorado walk out of class to protest ICE</p>
+
+                <p class="story-reason sans">Hundreds of Colorado students walked out of class to protest ICE.</p>
+
+                <p class="story-lede">Hundreds of students across Colorado walk out of class to protest ICE&nbsp;&nbsp;Denver7</p>
+
+                <a class="story-link" href="https://news.google.com/rss/articles/CBMirgFBVV95cUxOSEthZmZfNnY5X29aSEpUQW00NTlfQlNjMWp5MnZsNGlDeU5mOV9FenJZcHNHTzh2TXRhblE0UlNwd25Sd1JKT09ILU12MWVTMmxveEVKTVRsbEFSMVRCSTA2UXNfY0ZSSWJMUGs0ZDNtUWpFbDlxOVA4MVN6VnFQcVZnSmNNYU8xOWVsTUFHbS1NLWlBT0VpaVNpWE5STy0ta1hHU0RYZnAxNXh2aVE?oc=5" target="_blank" rel="noopener">Read more ↗</a>
+
+            </div>
+
+
+
+            <p class="sans" style="font-size:0.72rem;color:#bbb;margin-top:1.25rem;text-align:right;letter-spacing:0.03em;">
+                52 stories set aside
+            </p>
+
+        </section>
+        <!-- Task tracker -->
+        <div class="right-col" aria-label="Task tracker">
+            <section class="task-panel" aria-labelledby="today-tasks-title">
+                <div class="task-panel-header">
+                    <p class="section-title" id="today-tasks-title">Today</p>
+                    <span class="task-count" id="today-task-count" aria-live="polite"></span>
+                </div>
+                <form class="task-form" id="task-form">
+                    <label class="sr-only" for="task-input">Add a task</label>
+                    <input class="task-input" id="task-input" type="text" maxlength="160"
+                        placeholder="Add a task…" autocomplete="off">
+                    <button class="task-add" type="submit" aria-label="Add task">+</button>
+                </form>
+                <ul class="task-list" id="today-task-list"></ul>
+                <p class="task-empty" id="today-task-empty">Nothing here yet.</p>
+                <p class="task-status" id="task-status" aria-live="polite"></p>
+            </section>
+            <section class="task-panel task-panel-older" id="older-task-panel"
+                aria-labelledby="older-tasks-title" hidden>
+                <div class="task-panel-header">
+                    <p class="section-title" id="older-tasks-title">Older</p>
+                    <span class="task-count" id="older-task-count" aria-live="polite"></span>
+                </div>
+                <ul class="task-list" id="older-task-list"></ul>
+                <p class="task-empty" id="older-task-empty">Nothing here yet.</p>
+            </section>
+        </div>
+        </div><!-- /.content-layout -->
+
+        <footer>
+            <p>Updated at 8:25 PM</p>
+            <p class="tagline">"No algorithms. No clickbait. Just what matters."</p>
+            <button class="settings-btn" onclick="openSettings()" title="Settings">⚙</button>
         </footer>
     </div>
+
+    <!-- Settings overlay -->
+    <div class="settings-backdrop" id="settings-backdrop">
+        <div class="settings-panel">
+            <h3>Settings</h3>
+
+            <div class="settings-field">
+                <label>Your name — used in the greeting</label>
+                <input type="text" id="set-user-name">
+            </div>
+            <div class="settings-field">
+                <label>Page title</label>
+                <input type="text" id="set-page-title">
+            </div>
+
+            <div class="settings-section">Location</div>
+            <div class="settings-field">
+                <label>Location name — shown on the page and used for the Local news tab</label>
+                <input type="text" id="set-location-name">
+            </div>
+            <div class="settings-grid">
+                <div class="settings-field">
+                    <label>Latitude (−90 to 90)</label>
+                    <input type="number" id="set-latitude" step="any" min="-90" max="90">
+                </div>
+                <div class="settings-field">
+                    <label>Longitude (−180 to 180)</label>
+                    <input type="number" id="set-longitude" step="any" min="-180" max="180">
+                </div>
+                <div class="settings-field">
+                    <label>Timezone (IANA name)</label>
+                    <input type="text" id="set-timezone" placeholder="America/Denver">
+                </div>
+            </div>
+
+            <div class="settings-section">Calendars</div>
+            <div id="calendar-rows"></div>
+            <button type="button" class="add-row-btn" onclick="addCalendarRow()">+ Add calendar</button>
+            <p class="settings-hint">Secret iCal (.ics) addresses. Saved URLs are never sent back to the browser —
+            they appear masked here, and typing a new URL replaces the saved one. Leave a masked row untouched to keep it.</p>
+
+            <div class="settings-section">News categories</div>
+            <div id="category-rows"></div>
+            <button type="button" class="add-row-btn" onclick="addCategoryRow()">+ Add category</button>
+            <p class="settings-hint">The tabs on your news page, top to bottom. Renaming a category renames
+            its feeds; removing one removes its feeds and any matching background news feed.
+            A &ldquo;Local&rdquo; tab is generated from your location name while it exists here.</p>
+
+            <div class="settings-section">News feeds</div>
+            <div id="feed-rows"></div>
+            <button type="button" class="add-row-btn" onclick="addFeedRow()">+ Add feed</button>
+            <p class="settings-hint">Each feed fills a category tab; use the same category name to merge
+            feeds into one tab. Adding a feed with a new category name creates that tab.</p>
+
+            <div class="settings-section">Curation &amp; display</div>
+            <div class="settings-check">
+                <input type="checkbox" id="set-curation-enabled">
+                <label for="set-curation-enabled">AI news curation — pick the most newsworthy stories per category</label>
+            </div>
+            <div class="settings-field">
+                <label>Per-category strictness</label>
+                <div id="quality-rows"></div>
+                <p class="settings-hint">strict — only genuinely significant stories pass (a category may show none).
+                relaxed — always pick the 2–4 best available.</p>
+            </div>
+            <div class="settings-grid">
+                <div class="settings-field">
+                    <label>Stories per category</label>
+                    <input type="number" id="set-stories-per" min="1" max="20">
+                </div>
+                <div class="settings-field">
+                    <label>Cluster threshold (0–1)</label>
+                    <input type="number" id="set-cluster-threshold" step="0.05" min="0" max="1">
+                </div>
+
+            </div>
+
+
+
+            <div class="settings-actions">
+                <button class="btn-primary" onclick="saveAllSettings()">Save</button>
+                <button onclick="resetToDefaults()">Reset to default</button>
+                <button onclick="revertToEnv()">Revert to .env</button>
+                <button onclick="closeSettings()">Cancel</button>
+            </div>
+            <p id="settings-status"></p>
+        </div>
+    </div>
+
+    <script>
+        // Tab switching for news
+        const tabs = document.querySelectorAll('.tab');
+        const stories = document.querySelectorAll('.story-card');
+
+        function showTab(activeTab) {
+            const cat = activeTab.dataset.cat;
+            tabs.forEach(t => t.classList.toggle('active', t === activeTab));
+            stories.forEach(s => {
+                s.style.display = s.dataset.category === cat ? '' : 'none';
+            });
+        }
+
+        if (tabs.length > 0) {
+            tabs.forEach(tab => tab.addEventListener('click', () => showTab(tab)));
+            showTab(tabs[0]);
+        }
+
+        // Toggle an already-populated detail div (used by Background button)
+        function toggleDetail(btn) {
+            const detail = btn.nextElementSibling;
+            const isHidden = detail.hidden;
+            if (!btn.dataset.label) btn.dataset.label = btn.textContent;
+            detail.hidden = !isHidden;
+            btn.textContent = isHidden ? 'Less' : btn.dataset.label;
+        }
+
+        // Fetch AI summary on first click, then toggle like normal
+        async function fetchSummary(btn) {
+            const detailDiv = btn.nextElementSibling;
+            const detailText = detailDiv.querySelector('.detail-text');
+
+            // Already loaded — just toggle
+            if (btn.dataset.loaded) {
+                const isHidden = detailDiv.hidden;
+                detailDiv.hidden = !isHidden;
+                btn.textContent = isHidden ? 'Less' : 'More detail';
+                return;
+            }
+
+            btn.textContent = 'Loading…';
+            btn.disabled = true;
+
+            const params = new URLSearchParams({
+                url: btn.dataset.url,
+                headline: btn.dataset.headline,
+                lede: btn.dataset.lede,
+            });
+
+            try {
+                const resp = await fetch(`/api/story/summarize?${params}`);
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const data = await resp.json();
+
+                // Replace lede with AI brief
+                if (data.brief) {
+                    btn.closest('.story-card').querySelector('.story-lede').textContent = data.brief;
+                }
+
+                // Populate and show detail
+                if (data.detail) {
+                    detailText.textContent = data.detail;
+                }
+
+                // Show "Read original" link only if article was accessible
+                const link = detailDiv.querySelector('.story-link');
+                if (link) link.hidden = !data.accessible;
+
+                // Populate background context if present
+                const contextWrapper = btn.closest('.story-card').querySelector('.story-context');
+                if (contextWrapper && data.context) {
+                    contextWrapper.querySelector('.context-text').textContent = data.context;
+                    contextWrapper.hidden = false;
+                }
+
+                btn.dataset.loaded = '1';
+                btn.disabled = false;
+                detailDiv.hidden = false;
+                btn.textContent = 'Less';
+            } catch (e) {
+                btn.textContent = 'More detail';
+                btn.disabled = false;
+            }
+        }
+
+        // ── Task tracker ─────────────────────────────────────────────────────
+        (function initTaskTracker() {
+            const TASK_TIMEZONE = "America/Denver";
+            const taskForm = document.getElementById('task-form');
+            const taskInput = document.getElementById('task-input');
+            const todayTaskList = document.getElementById('today-task-list');
+            const todayTaskEmpty = document.getElementById('today-task-empty');
+            const todayTaskCount = document.getElementById('today-task-count');
+            const olderTaskPanel = document.getElementById('older-task-panel');
+            const olderTaskList = document.getElementById('older-task-list');
+            const olderTaskEmpty = document.getElementById('older-task-empty');
+            const olderTaskCount = document.getElementById('older-task-count');
+            const taskStatus = document.getElementById('task-status');
+            let taskItems = [];
+            let currentTaskDate = '';
+            let taskFetchPromise = null;
+
+            function taskDateKey(date = new Date()) {
+                const parts = new Intl.DateTimeFormat('en-US', {
+                    timeZone: TASK_TIMEZONE,
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                }).formatToParts(date);
+                const values = {};
+                parts.forEach(part => {
+                    if (part.type !== 'literal') values[part.type] = part.value;
+                });
+                return `${values.year}-${values.month}-${values.day}`;
+            }
+
+            function setTaskStatus(message) {
+                taskStatus.textContent = message;
+            }
+
+            function taskCountText(count) {
+                return `${count} open ${count === 1 ? 'task' : 'tasks'}`;
+            }
+
+            function renderTaskList(list, empty, items) {
+                list.innerHTML = '';
+                empty.hidden = items.length > 0;
+
+                items.forEach(task => {
+                    const item = document.createElement('li');
+                    item.className = 'task-item';
+
+                    const label = document.createElement('label');
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.checked = !!task.completed;
+                    checkbox.setAttribute(
+                        'aria-label',
+                        `${task.completed ? 'Mark incomplete' : 'Complete'}: ${task.text}`
+                    );
+
+                    const indicator = document.createElement('span');
+                    indicator.className = 'task-checkbox';
+                    indicator.setAttribute('aria-hidden', 'true');
+
+                    const text = document.createElement('span');
+                    text.className = 'task-text';
+                    text.textContent = task.text;
+
+                    checkbox.addEventListener('change', async () => {
+                        const completed = checkbox.checked;
+                        checkbox.disabled = true;
+                        try {
+                            const response = await fetch(`/api/tasks/${encodeURIComponent(task.id)}`, {
+                                method: 'PATCH',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({completed}),
+                            });
+                            if (!response.ok) {
+                                const error = await response.json().catch(() => ({}));
+                                throw new Error(error.error || 'Could not update task.');
+                            }
+                            await fetchTasks();
+                        } catch (error) {
+                            checkbox.checked = !completed;
+                            checkbox.disabled = false;
+                            setTaskStatus(error.message || 'Could not update task.');
+                        }
+                    });
+
+                    label.append(checkbox, indicator, text);
+                    item.appendChild(label);
+                    list.appendChild(item);
+                });
+            }
+
+            function renderTasks() {
+                const today = currentTaskDate;
+                const todayItems = taskItems.filter(task => task.createdDate === today);
+                const olderItems = taskItems.filter(task => task.createdDate < today);
+                const todayOpen = todayItems.filter(task => !task.completed).length;
+                const olderOpen = olderItems.filter(task => !task.completed).length;
+
+                renderTaskList(todayTaskList, todayTaskEmpty, todayItems);
+                renderTaskList(olderTaskList, olderTaskEmpty, olderItems);
+                todayTaskCount.textContent = taskCountText(todayOpen);
+                olderTaskCount.textContent = taskCountText(olderOpen);
+                olderTaskPanel.hidden = olderItems.length === 0;
+            }
+
+            async function fetchTasks() {
+                if (taskFetchPromise) return taskFetchPromise;
+
+                taskFetchPromise = (async () => {
+                    try {
+                        const response = await fetch('/api/tasks', {cache: 'no-store'});
+                        if (!response.ok) throw new Error('Tasks are temporarily unavailable.');
+                        const data = await response.json();
+                        taskItems = Array.isArray(data.tasks) ? data.tasks : [];
+                        currentTaskDate = taskDateKey();
+                        renderTasks();
+                        setTaskStatus('');
+                    } catch (error) {
+                        if (!currentTaskDate) {
+                            currentTaskDate = taskDateKey();
+                            renderTasks();
+                        }
+                        setTaskStatus(error.message || 'Tasks are temporarily unavailable.');
+                    } finally {
+                        taskFetchPromise = null;
+                    }
+                })();
+                return taskFetchPromise;
+            }
+
+            taskForm.addEventListener('submit', async event => {
+                event.preventDefault();
+                const text = taskInput.value.trim();
+                if (!text) return;
+
+                const addButton = taskForm.querySelector('.task-add');
+                taskInput.disabled = true;
+                addButton.disabled = true;
+                setTaskStatus('');
+                try {
+                    const response = await fetch('/api/tasks', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({text}),
+                    });
+                    if (!response.ok) {
+                        const error = await response.json().catch(() => ({}));
+                        throw new Error(error.error || 'Could not add task.');
+                    }
+                    taskInput.value = '';
+                    await fetchTasks();
+                } catch (error) {
+                    setTaskStatus(error.message || 'Could not add task.');
+                } finally {
+                    taskInput.disabled = false;
+                    addButton.disabled = false;
+                    taskInput.focus();
+                }
+            });
+
+            fetchTasks();
+
+            // Poll so changes made in another browser appear without a full page reload.
+            window.setInterval(fetchTasks, 60000);
+        })();
+
+        // ── Settings panel ────────────────────────────────────────────────────
+        let _defaults = {};       // hardcoded AI prompt defaults
+        let _settingsData = null; // last GET /api/config/settings response
+
+        function setIfPresent(id, value) {
+            const el = document.getElementById(id);
+            if (el) el.value = value ?? '';
+        }
+
+        function fieldVal(id) {
+            const el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        }
+
+        // ── Dynamic rows (calendars, feeds, quality gates) ───────────────────
+
+        function makeRemoveButton(row, onRemove) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'dyn-remove';
+            btn.textContent = '✕';
+            btn.title = 'Remove';
+            btn.onclick = () => {
+                if (onRemove) onRemove();
+                row.remove();
+            };
+            return btn;
+        }
+
+        function calendarRow(label, maskedUrl, isNew) {
+            const row = document.createElement('div');
+            row.className = 'dyn-row';
+            const labelInput = document.createElement('input');
+            labelInput.className = 'dyn-input dyn-cat';
+            labelInput.placeholder = 'Name (e.g. Personal)';
+            labelInput.value = label || '';
+            const urlInput = document.createElement('input');
+            urlInput.className = 'dyn-input';
+            urlInput.type = 'text';
+            urlInput.placeholder = maskedUrl || 'https://…/basic.ics';
+            // The mask seen at load time — sent back unchanged if the user types nothing
+            urlInput.dataset.existing = isNew ? '' : (maskedUrl || '');
+            row.append(labelInput, urlInput, makeRemoveButton(row));
+            return row;
+        }
+
+        function renderCalendarRows(calendars) {
+            const wrap = document.getElementById('calendar-rows');
+            wrap.innerHTML = '';
+            calendars.forEach(c => wrap.appendChild(calendarRow(c.label, c.url, false)));
+        }
+
+        function addCalendarRow() {
+            document.getElementById('calendar-rows').appendChild(calendarRow('', '', true));
+        }
+
+        function collectCalendars() {
+            const out = [];
+            document.querySelectorAll('#calendar-rows .dyn-row').forEach(row => {
+                const label = row.children[0].value.trim();
+                const urlInput = row.children[1];
+                // Untouched row → send the mask back so the server keeps the saved URL
+                const url = urlInput.value.trim() || urlInput.dataset.existing || '';
+                if (!label && !url) return;
+                out.push({label: label, url: url});
+            });
+            return out;
+        }
+
+        function categoryRow(name) {
+            const row = document.createElement('div');
+            row.className = 'dyn-row';
+            const input = document.createElement('input');
+            input.className = 'dyn-input dyn-cat';
+            input.placeholder = 'Category (tab)';
+            input.value = name || '';
+            input.setAttribute('list', 'feed-category-list');
+            if (name) input.dataset.original = name;
+
+            const gateFor = orig =>
+                document.querySelector('#quality-rows select[data-cat="' + CSS.escape(orig) + '"]');
+
+            // Renaming a category renames its feeds and quality-gate entry to match
+            input.addEventListener('change', () => {
+                const orig = input.dataset.original;
+                const renamed = input.value.trim();
+                if (!orig || !renamed || renamed === orig) return;
+                document.querySelectorAll('#feed-rows .dyn-row').forEach(r => {
+                    if (r.children[0].value.trim() === orig) r.children[0].value = renamed;
+                });
+                const gate = gateFor(orig);
+                if (gate) {
+                    gate.dataset.cat = renamed;
+                    gate.closest('.quality-row').querySelector('.quality-name').textContent = renamed;
+                }
+                input.dataset.original = renamed;
+            });
+
+            // Removing a category removes its feeds and quality-gate entry with it
+            row.append(input, makeRemoveButton(row, () => {
+                const orig = input.dataset.original || input.value.trim();
+                document.querySelectorAll('#feed-rows .dyn-row').forEach(r => {
+                    if (r.children[0].value.trim() === orig) r.remove();
+                });
+                const gate = gateFor(orig);
+                if (gate) gate.closest('.quality-row').remove();
+            }));
+            return row;
+        }
+
+        function renderCategoryRows(categories) {
+            const wrap = document.getElementById('category-rows');
+            wrap.innerHTML = '';
+            (categories || []).forEach(c => wrap.appendChild(categoryRow(c)));
+        }
+
+        function addCategoryRow() {
+            document.getElementById('category-rows').appendChild(categoryRow(''));
+        }
+
+        function collectCategories() {
+            const out = [];
+            document.querySelectorAll('#category-rows .dyn-row').forEach(row => {
+                const name = row.children[0].value.trim();
+                if (name && !out.some(c => c.toLowerCase() === name.toLowerCase())) out.push(name);
+            });
+            return out;
+        }
+
+        function feedRow(category, url) {
+            const row = document.createElement('div');
+            row.className = 'dyn-row';
+            const catInput = document.createElement('input');
+            catInput.className = 'dyn-input dyn-cat';
+            catInput.placeholder = 'Category (tab)';
+            catInput.value = category || '';
+            catInput.setAttribute('list', 'feed-category-list');
+            const urlInput = document.createElement('input');
+            urlInput.className = 'dyn-input';
+            urlInput.type = 'url';
+            urlInput.placeholder = 'https://example.com/rss.xml';
+            urlInput.value = url || '';
+            row.append(catInput, urlInput, makeRemoveButton(row));
+            return row;
+        }
+
+        function renderFeedRows(feeds, categories) {
+            const wrap = document.getElementById('feed-rows');
+            wrap.innerHTML = '';
+            let datalist = document.getElementById('feed-category-list');
+            if (!datalist) {
+                datalist = document.createElement('datalist');
+                datalist.id = 'feed-category-list';
+                document.body.appendChild(datalist);
+            }
+            datalist.innerHTML = '';
+            categories.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                datalist.appendChild(opt);
+            });
+            feeds.forEach(f => wrap.appendChild(feedRow(f.category, f.url)));
+        }
+
+        function addFeedRow() {
+            document.getElementById('feed-rows').appendChild(feedRow('', ''));
+        }
+
+        function collectFeeds() {
+            const out = [];
+            document.querySelectorAll('#feed-rows .dyn-row').forEach(row => {
+                const category = row.children[0].value.trim();
+                const url = row.children[1].value.trim();
+                if (!category && !url) return;
+                out.push({category: category, label: '', url: url});
+            });
+            return out;
+        }
+
+        function renderQualityRows(gates, categories) {
+            const wrap = document.getElementById('quality-rows');
+            wrap.innerHTML = '';
+            categories.forEach(cat => {
+                const row = document.createElement('div');
+                row.className = 'quality-row';
+                const name = document.createElement('span');
+                name.className = 'quality-name';
+                name.textContent = cat;
+                const select = document.createElement('select');
+                select.dataset.cat = cat;
+                [['relaxed', 'Relaxed'], ['strict', 'Strict']].forEach(([v, t]) => {
+                    const opt = document.createElement('option');
+                    opt.value = v;
+                    opt.textContent = t;
+                    select.appendChild(opt);
+                });
+                select.value = gates[cat] === 'strict' ? 'strict' : 'relaxed';
+                row.append(name, select);
+                wrap.appendChild(row);
+            });
+        }
+
+        function collectQualityGates() {
+            const cats = collectCategories().map(c => c.toLowerCase());
+            const out = {};
+            document.querySelectorAll('#quality-rows select').forEach(sel => {
+                if (cats.includes(sel.dataset.cat.toLowerCase())) out[sel.dataset.cat] = sel.value;
+            });
+            return out;
+        }
+
+        // ── Load / save / reset ──────────────────────────────────────────────
+
+        async function openSettings() {
+            const status = document.getElementById('settings-status');
+            status.textContent = 'Loading…';
+            document.getElementById('settings-backdrop').classList.add('open');
+            try {
+                const [promptsResp, settingsResp] = await Promise.all([
+                    fetch('/api/config/prompts'),
+                    fetch('/api/config/settings'),
+                ]);
+                if (!settingsResp.ok) throw new Error('settings load failed');
+                const prompts = await promptsResp.json();
+                const settings = await settingsResp.json();
+                _defaults = prompts.defaults || {};
+                _settingsData = settings;
+
+                setIfPresent('summary-prompt', prompts.summary_prompt);
+                setIfPresent('context-prompt', prompts.context_prompt);
+                setIfPresent('curation-prompt', prompts.curation_prompt);
+                setIfPresent('selection-prompt', prompts.selection_prompt);
+                setIfPresent('briefing-prompt', prompts.briefing_prompt);
+
+                setIfPresent('set-user-name', settings.user_name);
+                setIfPresent('set-page-title', settings.page_title);
+                setIfPresent('set-location-name', settings.location_name);
+                setIfPresent('set-latitude', settings.latitude);
+                setIfPresent('set-longitude', settings.longitude);
+                setIfPresent('set-timezone', settings.timezone);
+
+                renderCalendarRows(settings.calendars || []);
+                renderCategoryRows(settings.categories || []);
+                renderFeedRows(settings.feeds || [], settings.feed_categories || []);
+
+                document.getElementById('set-curation-enabled').checked = !!settings.news_curation_enabled;
+                renderQualityRows(settings.quality_gates || {}, settings.categories || []);
+
+                setIfPresent('set-stories-per', settings.stories_per_category);
+                setIfPresent('set-cluster-threshold', settings.cluster_threshold);
+                if (document.getElementById('set-context-max')) {
+                    setIfPresent('set-context-max', settings.context_max_per_refresh);
+                }
+
+                status.textContent = '';
+            } catch (e) {
+                status.textContent = 'Failed to load settings.';
+            }
+        }
+
+        function closeSettings() {
+            document.getElementById('settings-backdrop').classList.remove('open');
+            document.getElementById('settings-status').textContent = '';
+        }
+
+        function resetToDefaults() {
+            // AI prompts → hardcoded defaults
+            setIfPresent('summary-prompt', _defaults.summary_prompt);
+            setIfPresent('context-prompt', _defaults.context_prompt);
+            setIfPresent('curation-prompt', _defaults.curation_prompt);
+            setIfPresent('selection-prompt', _defaults.selection_prompt);
+            setIfPresent('briefing-prompt', _defaults.briefing_prompt);
+
+            // Everything else → env-var defaults
+            const d = (_settingsData && _settingsData.env_defaults) || {};
+            setIfPresent('set-user-name', d.user_name);
+            setIfPresent('set-page-title', d.page_title);
+            setIfPresent('set-location-name', d.location_name);
+            setIfPresent('set-latitude', d.latitude);
+            setIfPresent('set-longitude', d.longitude);
+            setIfPresent('set-timezone', d.timezone);
+            document.getElementById('set-curation-enabled').checked = !!d.news_curation_enabled;
+            setIfPresent('set-stories-per', d.stories_per_category);
+            setIfPresent('set-cluster-threshold', d.cluster_threshold);
+            if (document.getElementById('set-context-max')) {
+                setIfPresent('set-context-max', d.context_max_per_refresh);
+            }
+            document.getElementById('settings-status').textContent = 'Defaults restored — click Save to apply.';
+        }
+
+        async function revertToEnv() {
+            const status = document.getElementById('settings-status');
+            status.textContent = 'Reverting…';
+            try {
+                const resp = await fetch('/api/config/settings', {method: 'DELETE'});
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    status.textContent = err.error || 'Revert failed.';
+                    return;
+                }
+                status.textContent = 'Reverted to .env defaults.';
+                setTimeout(() => location.reload(), 1200);
+            } catch (e) {
+                status.textContent = 'Revert failed — server unreachable.';
+            }
+        }
+
+        async function saveAllSettings() {
+            const status = document.getElementById('settings-status');
+            status.textContent = 'Saving…';
+
+            const body = {
+                user_name: fieldVal('set-user-name'),
+                page_title: fieldVal('set-page-title'),
+                location_name: fieldVal('set-location-name'),
+                latitude: fieldVal('set-latitude'),
+                longitude: fieldVal('set-longitude'),
+                timezone: fieldVal('set-timezone'),
+                calendars: collectCalendars(),
+                categories: collectCategories(),
+                feeds: collectFeeds(),
+                news_curation_enabled: document.getElementById('set-curation-enabled').checked,
+                quality_gates: collectQualityGates(),
+                stories_per_category: fieldVal('set-stories-per'),
+                cluster_threshold: fieldVal('set-cluster-threshold'),
+            };
+            const ctxEl = document.getElementById('set-context-max');
+            if (ctxEl) body.context_max_per_refresh = ctxEl.value.trim();
+
+            if (!body.user_name || !body.page_title || !body.location_name || !body.timezone) {
+                status.textContent = 'Name, page title, location, and timezone are required.';
+                return;
+            }
+
+            const tasks = [fetch('/api/config/settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(body),
+            })];
+            if (document.getElementById('summary-prompt')) {
+                const promptBody = {summary_prompt: fieldVal('summary-prompt')};
+                const ctxPrompt = document.getElementById('context-prompt');
+                if (ctxPrompt) promptBody.context_prompt = ctxPrompt.value.trim();
+                const curPrompt = document.getElementById('curation-prompt');
+                if (curPrompt) promptBody.curation_prompt = curPrompt.value.trim();
+                const brfPrompt = document.getElementById('briefing-prompt');
+                if (brfPrompt) promptBody.briefing_prompt = brfPrompt.value.trim();
+                const selPrompt = document.getElementById('selection-prompt');
+                if (selPrompt) promptBody.selection_prompt = selPrompt.value.trim();
+                tasks.push(fetch('/api/config/prompts', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(promptBody),
+                }));
+            }
+
+            try {
+                const responses = await Promise.all(tasks);
+                for (const resp of responses) {
+                    if (!resp.ok) {
+                        const err = await resp.json().catch(() => ({}));
+                        status.textContent = err.error || 'Save failed.';
+                        return;
+                    }
+                }
+                status.textContent = 'Saved — data refreshes in the background.';
+                setTimeout(() => location.reload(), 1200);
+            } catch (e) {
+                status.textContent = 'Save failed — server unreachable.';
+            }
+        }
+
+        // Close on backdrop click (outside the panel)
+        document.getElementById('settings-backdrop').addEventListener('click', function(e) {
+            if (e.target === this) closeSettings();
+        });
+
+        // Auto-reload the page after each refresh interval so data stays fresh
+        setTimeout(() => location.reload(), 3600000);
+    </script>
 </body>
 </html>

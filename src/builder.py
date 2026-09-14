@@ -9,7 +9,7 @@ import jinja2
 from src.config import BASE_DIR, REFRESH_INTERVAL, AI_SUMMARY_ENABLED, CONTEXT_ENABLED
 from src.app_settings import (
     get_location_name, get_news_curation_enabled, get_page_title,
-    get_timezone, get_user_name,
+    get_timezone, get_timezone_name, get_user_name,
 )
 from src.fetcher import load_weather
 from src.calendar import load_calendar
@@ -153,6 +153,7 @@ def build_page() -> str:
         date_str=now.strftime("%A, %B %d, %Y"),
         greeting=f"{_time_of_day_greeting(now)}, {get_user_name()}",
         location=get_location_name(),
+        timezone_name=get_timezone_name(),
         weather={
             "temp_f": current.get("temperature_f") or 62,
             "description": current.get("description") or "Mostly sunny",

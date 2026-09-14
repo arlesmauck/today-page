@@ -23,6 +23,7 @@ from src.fetcher import load_weather, refresh_weather
 from src.calendar import effective_calendars, load_calendar
 from src.news import editable_feeds, effective_categories, load_news, news_categories
 from src.builder import write_page
+from src.tasks import MAX_TASK_LENGTH, create_task, load_tasks, set_task_completed
 from src.scheduler import refresh_now
 
 logger = logging.getLogger("server")
@@ -82,6 +83,54 @@ async def get_calendar():
             content={"error": "Calendar data not available yet. Refresh in progress."}
         )
     return data
+
+
+@app.get("/api/tasks")
+async def get_tasks():
+    """Return persisted tasks after applying daily and weekly cleanup."""
+    return {"tasks": load_tasks()}
+
+
+@app.post("/api/tasks")
+async def add_task(request: Request):
+    """Create a task for today."""
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse(status_code=400, content={"error": "Invalid JSON body"})
+
+    text = body.get("text", "") if isinstance(body, dict) else ""
+    if not isinstance(text, str) or not text.strip():
+        return JSONResponse(status_code=422, content={"error": "Task text must not be empty"})
+    if len(text.strip()) > MAX_TASK_LENGTH:
+        return JSONResponse(
+            status_code=422,
+            content={"error": f"Task text must be {MAX_TASK_LENGTH} characters or fewer"},
+        )
+
+    try:
+        task = create_task(text)
+    except ValueError as exc:
+        return JSONResponse(status_code=422, content={"error": str(exc)})
+    return JSONResponse(status_code=201, content={"task": task})
+
+
+@app.patch("/api/tasks/{task_id}")
+async def update_task(task_id: str, request: Request):
+    """Update a task's completion state."""
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse(status_code=400, content={"error": "Invalid JSON body"})
+
+    completed = body.get("completed") if isinstance(body, dict) else None
+    if not isinstance(completed, bool):
+        return JSONResponse(status_code=422, content={"error": "completed must be a boolean"})
+
+    task = set_task_completed(task_id, completed)
+    if task is None:
+        return JSONResponse(status_code=404, content={"error": "Task not found"})
+    return {"task": task}
 
 
 @app.get("/api/news")

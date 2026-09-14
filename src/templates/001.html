@@ -32,34 +32,167 @@
             .content-layout {
                 grid-template-columns: 380px 1fr;
             }
-            .right-col { display: none; }
+            .right-col {
+                grid-column: 1 / -1;
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 1rem;
+            }
         }
         @media (max-width: 800px) {
             .content-layout {
                 grid-template-columns: 1fr;
             }
+            .right-col {
+                grid-column: auto;
+                display: block;
+            }
         }
-        /* Placeholder panel */
-        .placeholder-panel {
+        /* Task tracker */
+        .task-panel {
             background: #fff;
-            border: 1px dashed #ddd;
-            border-radius: 4px;
-            padding: 1.5rem;
-            color: #bbb;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06);
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+        }
+        .task-panel:last-child { margin-bottom: 0; }
+        .task-panel-older {
+            background: rgba(255,255,255,0.72);
+        }
+        .task-panel-header {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        .task-panel-header .section-title { margin-bottom: 0; }
+        .task-count {
             font-family: 'Inter', sans-serif;
             font-size: 0.8rem;
-            text-align: center;
-            min-height: 200px;
+            color: #b0a898;
+            white-space: nowrap;
+        }
+        .task-form {
             display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
             gap: 0.5rem;
+            margin-bottom: 0.5rem;
         }
-        .placeholder-panel .ph-icon {
-            font-size: 2rem;
-            opacity: 0.4;
+        .task-input {
+            flex: 1;
+            min-width: 0;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.8rem;
+            color: #2d2d2d;
+            background: #fff;
+            border: 1px solid #e0dcd4;
+            border-radius: 4px;
+            padding: 0.55rem 0.65rem;
         }
+        .task-input::placeholder { color: #b8b0a4; }
+        .task-input:focus { outline: 1px solid #b0a898; }
+        .task-add {
+            flex: none;
+            width: 2.1rem;
+            border: 1px solid #2d2d2d;
+            border-radius: 4px;
+            background: #2d2d2d;
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            font-size: 1.1rem;
+            line-height: 1;
+            cursor: pointer;
+        }
+        .task-add:hover { background: #4a4540; }
+        .task-list {
+            list-style: none;
+            margin: 0;
+        }
+        .task-item {
+            border-bottom: 1px solid #f0ede6;
+            padding: 0.65rem 0;
+        }
+        .task-item:last-child { border-bottom: none; }
+        .task-item > label {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.65rem;
+            cursor: pointer;
+        }
+        .task-item input {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+        }
+        .task-checkbox {
+            flex: none;
+            width: 1rem;
+            height: 1rem;
+            border: 1px solid #c8c0b4;
+            border-radius: 50%;
+            margin-top: 0.15rem;
+            position: relative;
+        }
+        .task-item input:checked + .task-checkbox {
+            border-color: #a09080;
+            background: #a09080;
+        }
+        .task-item input:checked + .task-checkbox::after {
+            content: '';
+            position: absolute;
+            left: 0.26rem;
+            top: 0.1rem;
+            width: 0.28rem;
+            height: 0.5rem;
+            border: solid #fff;
+            border-width: 0 1px 1px 0;
+            transform: rotate(45deg);
+        }
+        .task-item input:focus-visible + .task-checkbox {
+            outline: 2px solid #b0a898;
+            outline-offset: 2px;
+        }
+        .task-text {
+            min-width: 0;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.8rem;
+            line-height: 1.45;
+            color: #4a4540;
+            overflow-wrap: anywhere;
+        }
+        .task-item input:checked ~ .task-text {
+            color: #b0a898;
+            text-decoration: line-through;
+            text-decoration-thickness: 1px;
+        }
+        .task-empty {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.75rem;
+            color: #b0a898;
+            font-style: italic;
+            padding: 0.35rem 0 0.1rem;
+        }
+        .task-status {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.72rem;
+            color: #a05a4a;
+            margin-top: 0.6rem;
+            line-height: 1.4;
+        }
+        .task-status:empty { display: none; }
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+        .task-panel[hidden] { display: none; }
         .sans { font-family: 'Inter', sans-serif; }
 
         /* Masthead */
@@ -654,13 +787,32 @@
             </p>
             {% endif %}
         </section>
-        <!-- Right column placeholder -->
-        <div class="right-col">
-            <div class="placeholder-panel">
-                <span class="ph-icon">⬜</span>
-                <strong>Coming soon</strong>
-                <span>This panel is reserved for a future widget</span>
-            </div>
+        <!-- Task tracker -->
+        <div class="right-col" aria-label="Task tracker">
+            <section class="task-panel" aria-labelledby="today-tasks-title">
+                <div class="task-panel-header">
+                    <p class="section-title" id="today-tasks-title">Today</p>
+                    <span class="task-count" id="today-task-count" aria-live="polite"></span>
+                </div>
+                <form class="task-form" id="task-form">
+                    <label class="sr-only" for="task-input">Add a task</label>
+                    <input class="task-input" id="task-input" type="text" maxlength="160"
+                        placeholder="Add a task…" autocomplete="off">
+                    <button class="task-add" type="submit" aria-label="Add task">+</button>
+                </form>
+                <ul class="task-list" id="today-task-list"></ul>
+                <p class="task-empty" id="today-task-empty">Nothing here yet.</p>
+                <p class="task-status" id="task-status" aria-live="polite"></p>
+            </section>
+            <section class="task-panel task-panel-older" id="older-task-panel"
+                aria-labelledby="older-tasks-title" hidden>
+                <div class="task-panel-header">
+                    <p class="section-title" id="older-tasks-title">Older</p>
+                    <span class="task-count" id="older-task-count" aria-live="polite"></span>
+                </div>
+                <ul class="task-list" id="older-task-list"></ul>
+                <p class="task-empty" id="older-task-empty">Nothing here yet.</p>
+            </section>
         </div>
         </div><!-- /.content-layout -->
 
@@ -874,6 +1026,172 @@
                 btn.disabled = false;
             }
         }
+
+        // ── Task tracker ─────────────────────────────────────────────────────
+        (function initTaskTracker() {
+            const TASK_TIMEZONE = {{ timezone_name | tojson }};
+            const taskForm = document.getElementById('task-form');
+            const taskInput = document.getElementById('task-input');
+            const todayTaskList = document.getElementById('today-task-list');
+            const todayTaskEmpty = document.getElementById('today-task-empty');
+            const todayTaskCount = document.getElementById('today-task-count');
+            const olderTaskPanel = document.getElementById('older-task-panel');
+            const olderTaskList = document.getElementById('older-task-list');
+            const olderTaskEmpty = document.getElementById('older-task-empty');
+            const olderTaskCount = document.getElementById('older-task-count');
+            const taskStatus = document.getElementById('task-status');
+            let taskItems = [];
+            let currentTaskDate = '';
+            let taskFetchPromise = null;
+
+            function taskDateKey(date = new Date()) {
+                const parts = new Intl.DateTimeFormat('en-US', {
+                    timeZone: TASK_TIMEZONE,
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                }).formatToParts(date);
+                const values = {};
+                parts.forEach(part => {
+                    if (part.type !== 'literal') values[part.type] = part.value;
+                });
+                return `${values.year}-${values.month}-${values.day}`;
+            }
+
+            function setTaskStatus(message) {
+                taskStatus.textContent = message;
+            }
+
+            function taskCountText(count) {
+                return `${count} open ${count === 1 ? 'task' : 'tasks'}`;
+            }
+
+            function renderTaskList(list, empty, items) {
+                list.innerHTML = '';
+                empty.hidden = items.length > 0;
+
+                items.forEach(task => {
+                    const item = document.createElement('li');
+                    item.className = 'task-item';
+
+                    const label = document.createElement('label');
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.checked = !!task.completed;
+                    checkbox.setAttribute(
+                        'aria-label',
+                        `${task.completed ? 'Mark incomplete' : 'Complete'}: ${task.text}`
+                    );
+
+                    const indicator = document.createElement('span');
+                    indicator.className = 'task-checkbox';
+                    indicator.setAttribute('aria-hidden', 'true');
+
+                    const text = document.createElement('span');
+                    text.className = 'task-text';
+                    text.textContent = task.text;
+
+                    checkbox.addEventListener('change', async () => {
+                        const completed = checkbox.checked;
+                        checkbox.disabled = true;
+                        try {
+                            const response = await fetch(`/api/tasks/${encodeURIComponent(task.id)}`, {
+                                method: 'PATCH',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({completed}),
+                            });
+                            if (!response.ok) {
+                                const error = await response.json().catch(() => ({}));
+                                throw new Error(error.error || 'Could not update task.');
+                            }
+                            await fetchTasks();
+                        } catch (error) {
+                            checkbox.checked = !completed;
+                            checkbox.disabled = false;
+                            setTaskStatus(error.message || 'Could not update task.');
+                        }
+                    });
+
+                    label.append(checkbox, indicator, text);
+                    item.appendChild(label);
+                    list.appendChild(item);
+                });
+            }
+
+            function renderTasks() {
+                const today = currentTaskDate;
+                const todayItems = taskItems.filter(task => task.createdDate === today);
+                const olderItems = taskItems.filter(task => task.createdDate < today);
+                const todayOpen = todayItems.filter(task => !task.completed).length;
+                const olderOpen = olderItems.filter(task => !task.completed).length;
+
+                renderTaskList(todayTaskList, todayTaskEmpty, todayItems);
+                renderTaskList(olderTaskList, olderTaskEmpty, olderItems);
+                todayTaskCount.textContent = taskCountText(todayOpen);
+                olderTaskCount.textContent = taskCountText(olderOpen);
+                olderTaskPanel.hidden = olderItems.length === 0;
+            }
+
+            async function fetchTasks() {
+                if (taskFetchPromise) return taskFetchPromise;
+
+                taskFetchPromise = (async () => {
+                    try {
+                        const response = await fetch('/api/tasks', {cache: 'no-store'});
+                        if (!response.ok) throw new Error('Tasks are temporarily unavailable.');
+                        const data = await response.json();
+                        taskItems = Array.isArray(data.tasks) ? data.tasks : [];
+                        currentTaskDate = taskDateKey();
+                        renderTasks();
+                        setTaskStatus('');
+                    } catch (error) {
+                        if (!currentTaskDate) {
+                            currentTaskDate = taskDateKey();
+                            renderTasks();
+                        }
+                        setTaskStatus(error.message || 'Tasks are temporarily unavailable.');
+                    } finally {
+                        taskFetchPromise = null;
+                    }
+                })();
+                return taskFetchPromise;
+            }
+
+            taskForm.addEventListener('submit', async event => {
+                event.preventDefault();
+                const text = taskInput.value.trim();
+                if (!text) return;
+
+                const addButton = taskForm.querySelector('.task-add');
+                taskInput.disabled = true;
+                addButton.disabled = true;
+                setTaskStatus('');
+                try {
+                    const response = await fetch('/api/tasks', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({text}),
+                    });
+                    if (!response.ok) {
+                        const error = await response.json().catch(() => ({}));
+                        throw new Error(error.error || 'Could not add task.');
+                    }
+                    taskInput.value = '';
+                    await fetchTasks();
+                } catch (error) {
+                    setTaskStatus(error.message || 'Could not add task.');
+                } finally {
+                    taskInput.disabled = false;
+                    addButton.disabled = false;
+                    taskInput.focus();
+                }
+            });
+
+            fetchTasks();
+
+            // Poll so changes made in another browser appear without a full page reload.
+            window.setInterval(fetchTasks, 60000);
+        })();
 
         // ── Settings panel ────────────────────────────────────────────────────
         let _defaults = {};       // hardcoded AI prompt defaults

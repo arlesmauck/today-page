@@ -128,6 +128,9 @@ volumes:
 | `GET /api/weather` | Cached weather JSON |
 | `GET /api/calendar` | Cached calendar JSON |
 | `GET /api/news` | Cached news JSON |
+| `GET /api/tasks` | Persisted task list |
+| `POST /api/tasks` | Create a task |
+| `PATCH /api/tasks/{id}` | Mark a task complete or incomplete |
 | `GET /api/health` | Health check |
 | `POST /api/weather/refresh` | Manually trigger a weather refresh |
 
