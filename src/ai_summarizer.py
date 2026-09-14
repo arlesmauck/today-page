@@ -36,14 +36,16 @@ is alleged, projected, or anonymously sourced.
 - Do not editorialize. Do not evaluate whether news is good or bad.
 - Write in plain declarative sentences at an 8th-grade reading level.
 - If the article is primarily opinion, analysis, a press release, or sponsored content, note \
-that in one phrase up front ("In an opinion piece, ...").
+  that in one phrase up front ("In an opinion piece, ...").
 - If the article is thin — mostly reaction, speculation, or a restatement of other coverage — \
-say so in the DETAIL rather than padding it out.
+  say so in the DETAIL rather than padding it out.
+- Make the DETAIL as long as needed to fully explain the story's material facts and context, \
+  then stop. Do not pad it to reach a target length.
 
 Output format — respond with exactly this structure, nothing else:
 BRIEF: [1-2 sentences: the core fact of what happened]
-DETAIL: [5-8 sentences: what happened, who is involved, relevant background context, \
-and any significant differing perspectives or implications]"""
+DETAIL: [a complete, appropriately detailed account of what happened, who is involved, \
+relevant background context, and any significant differing perspectives or implications]"""
 
 CONTEXT_SYSTEM_PROMPT = (
     "You are a reference editor. Write one paragraph of essential background "
@@ -177,7 +179,8 @@ async def _call_llm(headline: str, article_text: str) -> tuple[str, str] | None:
         text = await call_llm(
             _load_prompts()["summary_prompt"],
             f"Headline: {headline}\n\nArticle:\n{article_text}",
-            max_tokens=512,
+            # Generous safety ceiling; the prompt tells the model to stop when complete.
+            max_tokens=4096,
         )
         result = _parse_llm_response(text)
         if result:

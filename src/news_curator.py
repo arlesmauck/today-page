@@ -171,7 +171,8 @@ async def _call_curation_llm(user_message: str) -> str | None:
         return await call_llm(
             _get_curation_prompt(),
             user_message,
-            max_tokens=1024,
+            # Allow enough room for the JSON selection response and model reasoning.
+            max_tokens=2048,
         )
     except Exception as e:
         logger.error("Curation LLM call failed: %s", e)
